@@ -89,8 +89,8 @@ const concernKeywords: Record<Exclude<ConcernCategory, "general">, Array<{ words
   ],
   money: [
     { words: ["투자", "대출", "보증", "공동", "지인", "코인", "주식"], ruleId: "money-emotional" },
-    { words: ["저축", "절약", "집", "부동산", "예산"], ruleId: "money-fear-freeze" },
-    { words: ["소비", "쇼핑", "카드", "지출", "빚"], ruleId: "money-anxiety-spending" },
+    { words: ["저축", "절약", "집", "부동산", "예산", "아파트", "인테리어", "리모델링", "확장", "공사", "견적", "비용"], ruleId: "money-fear-freeze" },
+    { words: ["소비", "쇼핑", "카드", "지출", "빚", "가격", "금액"], ruleId: "money-anxiety-spending" },
   ],
   lifestyle: [
     { words: ["과로", "야근", "분노", "압박", "번아웃"], ruleId: "lifestyle-overdrive" },
@@ -98,6 +98,135 @@ const concernKeywords: Record<Exclude<ConcernCategory, "general">, Array<{ words
     { words: ["운동", "식사", "무기력", "생활", "휴식"], ruleId: "lifestyle-stagnation" },
   ],
 };
+
+type ConcernScenario = {
+  id: "home-project" | "career-change" | "investment" | "relationship-decision" | "recovery" | "general-decision";
+  category: Exclude<ConcernCategory, "general">;
+  label: string;
+  words: string[];
+  preferredRuleId: string;
+};
+
+const concernScenarios: ConcernScenario[] = [
+  {
+    id: "home-project",
+    category: "money",
+    label: "주거·인테리어 결정",
+    words: ["인테리어", "리모델링", "아파트", "주택", "확장 공사", "베란다", "샷시", "구축", "견적"],
+    preferredRuleId: "money-fear-freeze",
+  },
+  {
+    id: "career-change",
+    category: "career",
+    label: "퇴사·이직 결정",
+    words: ["퇴사", "이직", "직장", "상사", "취업", "승진"],
+    preferredRuleId: "career-recognition-collapse",
+  },
+  {
+    id: "investment",
+    category: "money",
+    label: "투자·대출 결정",
+    words: ["투자", "주식", "코인", "대출", "보증", "공동투자"],
+    preferredRuleId: "money-emotional",
+  },
+  {
+    id: "relationship-decision",
+    category: "relationship",
+    label: "관계 유지·정리 결정",
+    words: ["이별", "헤어", "결혼", "연애", "연락", "손절", "친구"],
+    preferredRuleId: "relationship-winning",
+  },
+  {
+    id: "recovery",
+    category: "lifestyle",
+    label: "과로·생활 회복",
+    words: ["번아웃", "과로", "수면", "잠", "불안", "무기력", "휴식"],
+    preferredRuleId: "lifestyle-rumination",
+  },
+  {
+    id: "general-decision",
+    category: "lifestyle",
+    label: "중요한 선택",
+    words: ["할까", "말까", "고민", "선택", "결정"],
+    preferredRuleId: "lifestyle-overdrive",
+  },
+];
+
+function detectConcernScenario(normalized: string): ConcernScenario | undefined {
+  return concernScenarios
+    .map((scenario) => ({
+      scenario,
+      matches: scenario.words.filter((word) => normalized.includes(word)).length,
+    }))
+    .filter(({ matches }) => matches > 0)
+    .sort((a, b) => b.matches - a.matches)[0]?.scenario;
+}
+
+function buildScenarioGuidance(
+  scenario: ConcernScenario,
+  chart: FortuneChart,
+  linkedWeakness: WarningRule,
+  concern: string,
+): Pick<NonNullable<AnalysisResult["focusAnalysis"]>, "scenarioLabel" | "understoodContext" | "directAnswer" | "decisionChecklist"> {
+  const elementEntries = Object.entries(chart.elementDistribution) as [Element, number][];
+  const strongestElement = [...elementEntries].sort((a, b) => b[1] - a[1])[0][0];
+  const weakestElement = [...elementEntries].sort((a, b) => a[1] - b[1])[0][0];
+  const amount = concern.match(/[\d,.]+\s*(?:천|만|억)?\s*원/)?.[0]?.replace(/\s+/g, "");
+  const commonPrefix = `원국에서는 “${linkedWeakness.title}” 반응이 먼저 올라올 수 있습니다. 강한 ${strongestElement}의 방식으로 밀어붙이기 전에 부족한 ${weakestElement}의 검증 절차를 붙여야 합니다.`;
+
+  if (scenario.id === "home-project") {
+    return {
+      scenarioLabel: scenario.label,
+      understoodContext: `노후 주거 공간의 공사 범위를 두고, 확장 여부와 ${amount ? `${amount} 이상의 ` : ""}비용 차이 사이에서 선택하는 문제로 읽었습니다.`,
+      directAnswer: `사주만으로 확장 공사를 권하거나 말릴 수는 없습니다. 지금은 “감당할 수 있나”보다 비용 차이가 실제 공간 효용과 안전·단열·결로·추가 공사 위험을 충분히 줄이는지부터 확인해야 합니다. ${commonPrefix}`,
+      decisionChecklist: [
+        "확장 없이 가구 배치나 수납 변경으로 같은 목적을 달성할 수 있는지 비교한다.",
+        "구조·단열·결로·창호·냉난방 영향과 필요한 승인 절차를 관리 주체와 전문가에게 확인한다.",
+        "업체마다 동일한 공사 범위표를 주고 자재·철거·폐기·추가 공사 조건이 분리된 견적을 받는다.",
+        "공사비 외 임시 거주, 보관, 일정 지연과 예상 밖 보수 비용을 위한 별도 예비비를 둔다.",
+        "실제 거주 예정 기간과 확장 공간의 주당 사용 시간을 적은 뒤 비용 차이와 비교한다.",
+      ],
+    };
+  }
+  if (scenario.id === "career-change") {
+    return {
+      scenarioLabel: scenario.label,
+      understoodContext: "현재 조직의 불편함과 다음 선택의 조건 사이에서 퇴사 또는 이직 시점을 결정하는 문제로 읽었습니다.",
+      directAnswer: `감정이 가장 높은 날에는 퇴사 여부를 확정하지 마십시오. ${commonPrefix} 다음 직장의 조건과 생활비 확보 여부가 문서로 확인된 뒤 결정해야 합니다.`,
+      decisionChecklist: ["퇴사 이유를 사람·업무·보상·성장으로 분리한다.", "다음 선택의 최소 조건 세 가지를 적는다.", "생활비와 공백 기간을 숫자로 확인한다.", "72시간 뒤 같은 결론인지 다시 검토한다."],
+    };
+  }
+  if (scenario.id === "investment") {
+    return {
+      scenarioLabel: scenario.label,
+      understoodContext: "수익 가능성과 손실 위험 사이에서 투자·대출 규모 또는 참여 여부를 결정하는 문제로 읽었습니다.",
+      directAnswer: `사주는 투자 수익을 보장하지 않습니다. ${commonPrefix} 손실 한도·회수 조건·최악의 경우를 별도 전문 자료로 검증하기 전에는 큰 금액을 결정하지 마십시오.`,
+      decisionChecklist: ["손실 가능한 최대 금액을 먼저 정한다.", "수익 설명과 반대되는 자료를 확인한다.", "대출·보증·명의 대여를 분리해 검토한다.", "지인 제안도 계약과 종료 조건을 문서로 남긴다."],
+    };
+  }
+  if (scenario.id === "relationship-decision") {
+    return {
+      scenarioLabel: scenario.label,
+      understoodContext: "관계에서 반복되는 갈등과 유지·거리 두기·정리 사이의 선택 문제로 읽었습니다.",
+      directAnswer: `확인되지 않은 의도 추측만으로 관계를 끝내거나 붙잡지 마십시오. ${commonPrefix} 반복된 사실과 한 번의 감정 반응을 구분한 뒤 경계를 말로 확인해야 합니다.`,
+      decisionChecklist: ["관찰한 사실과 내 해석을 분리한다.", "상대에게 원하는 변화와 기한을 한 번 명확히 말한다.", "사과보다 행동 변화가 반복되는지 본다.", "위협이나 안전 문제가 있다면 사주와 무관하게 전문 도움을 우선한다."],
+    };
+  }
+  if (scenario.id === "recovery") {
+    return {
+      scenarioLabel: scenario.label,
+      understoodContext: "버티는 생활을 계속할지, 속도를 낮추고 회복 구조를 만들지 묻는 문제로 읽었습니다.",
+      directAnswer: `회복은 의지로 버티는 일이 아닙니다. ${commonPrefix} 수면·식사·업무 종료 시간 중 하나부터 고정하고, 지속적인 이상 증상은 의료 전문가에게 확인하십시오.`,
+      decisionChecklist: ["일주일간 수면과 업무 종료 시간을 기록한다.", "회복을 방해하는 일정 하나를 줄인다.", "피로한 날 중요한 결정을 미룬다.", "지속되는 통증이나 이상 증상은 의료 전문가와 상담한다."],
+    };
+  }
+  return {
+    scenarioLabel: scenario.label,
+    understoodContext: "두 선택지의 장단점보다 지금의 감정과 판단 습관이 결론을 왜곡하는지 확인하려는 문제로 읽었습니다.",
+    directAnswer: `사주가 대신 결정을 내려주지는 않습니다. ${commonPrefix} 되돌릴 수 있는 선택은 작게 시험하고, 되돌리기 어려운 선택은 비용·기한·중단 조건을 확인한 뒤 결정하십시오.`,
+    decisionChecklist: ["원하는 결과와 피하려는 결과를 각각 적는다.", "되돌릴 수 있는 선택인지 구분한다.", "결정 기한과 중단 조건을 정한다.", "이해관계가 없는 사람에게 빠진 조건을 검토받는다."],
+  };
+}
 
 const categoryRules: Record<Exclude<ConcernCategory, "general">, WarningRule[]> = {
   relationship: relationshipWarnings,
@@ -114,6 +243,7 @@ function buildFocusAnalysis(
 ): AnalysisResult["focusAnalysis"] {
   const normalized = concern.trim().toLowerCase();
   if (!normalized) return undefined;
+  const scenario = detectConcernScenario(normalized);
 
   const keywordMatches = Object.entries(concernKeywords).flatMap(([category, routes]) =>
     routes.flatMap(({ words, ruleId }) =>
@@ -127,7 +257,9 @@ function buildFocusAnalysis(
     return counts;
   }, {});
   const category = requestedCategory === "general"
-    ? (Object.entries(inferredCategory).sort((a, b) => b[1] - a[1])[0]?.[0] as Exclude<ConcernCategory, "general"> | undefined) ?? "relationship"
+    ? scenario?.category
+      ?? (Object.entries(inferredCategory).sort((a, b) => b[1] - a[1])[0]?.[0] as Exclude<ConcernCategory, "general"> | undefined)
+      ?? "lifestyle"
     : requestedCategory;
   const routes = keywordMatches.filter((match) => match.category === category);
   const rules = categoryRules[category];
@@ -136,6 +268,7 @@ function buildFocusAnalysis(
       rule,
       score: (ruleScore(rule, chart) ?? 0)
         + routes.filter((route) => route.ruleId === rule.id).length * 60
+        + (scenario?.preferredRuleId === rule.id ? 80 : 0)
         + stableHash(`${chart.seed}:${normalized}:${rule.id}`) % 1000 / 1000,
     }))
     .sort((a, b) => b.score - a.score);
@@ -144,11 +277,15 @@ function buildFocusAnalysis(
     const overlap = (candidate: WarningRule) => candidate.tags.filter((tag) => rule.tags.includes(tag)).length;
     return overlap(b) - overlap(a);
   })[0];
+  const scenarioGuidance = scenario
+    ? buildScenarioGuidance(scenario, chart, linkedWeakness, concern)
+    : {};
   return {
     category,
     matchedKeywords: [...new Set(routes.map((route) => route.word))].slice(0, 5),
     rule,
     linkedWeakness,
+    ...scenarioGuidance,
   };
 }
 
@@ -226,7 +363,8 @@ function buildOverallAssessment(result: Omit<AnalysisResult, "overallAssessment"
   };
   const primary = weaknesses[0];
   const focusConclusion = focusAnalysis
-    ? `입력한 고민에서는 “${focusAnalysis.rule.title}” 문제가 원국의 핵심 약점과 겹칩니다. ${focusAnalysis.rule.actionRules[0]}`
+    ? focusAnalysis.directAnswer
+      ?? `입력한 고민에서는 “${focusAnalysis.rule.title}” 문제가 원국의 핵심 약점과 겹칩니다. ${focusAnalysis.rule.actionRules[0]}`
     : undefined;
 
   return {
@@ -236,7 +374,7 @@ function buildOverallAssessment(result: Omit<AnalysisResult, "overallAssessment"
     coreRisk: `${primary.summary} ${primary.consequences}`,
     protectiveFactor: `보호 요인은 ${strongestElement}의 ${strengths[strongestElement]}입니다. 다만 ${weakestElement}의 ${compensations[weakestElement]}을 붙여야 이 힘이 독주가 아닌 성과로 남습니다.`,
     currentFlow: `${currentAnnual.year}년 ${currentAnnual.korean} 세운은 ${currentAnnual.theme}입니다. 현재 자극도는 ${currentAnnual.pressure}이며, ${currentAnnual.warning}`,
-    firstPriority: focusAnalysis?.rule.actionRules[0] ?? primary.actionRules[0],
+    firstPriority: focusAnalysis?.decisionChecklist?.[0] ?? focusAnalysis?.rule.actionRules[0] ?? primary.actionRules[0],
     ...(focusConclusion ? { focusConclusion } : {}),
   };
 }

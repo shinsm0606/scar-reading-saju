@@ -149,7 +149,22 @@ describe("검증과 해석", () => {
     expect(result.focusAnalysis?.rule.id).toBe("career-recognition-collapse");
     expect(result.focusAnalysis?.matchedKeywords).toContain("퇴사");
     expect(result.overallAssessment.focusConclusion).toContain("퇴사");
-    expect(result.overallAssessment.firstPriority).toBe(result.focusAnalysis?.rule.actionRules[0]);
+    expect(result.overallAssessment.firstPriority).toBe(result.focusAnalysis?.decisionChecklist?.[0]);
+  });
+
+  it("인테리어 비용 질문을 주거 결정으로 이해하고 직접 답변한다", () => {
+    const chart = new KoreanManseCalculator().calculate(defaultInput);
+    const result = analyzeChart(chart, {
+      category: "general",
+      concern: "38년 된 구축 아파트 인테리어에서 거실 발코니 확장 공사를 할까 말까? 비용 차이가 1000만원 넘게 난다.",
+    }, 2026);
+    expect(result.focusAnalysis?.category).toBe("money");
+    expect(result.focusAnalysis?.scenarioLabel).toBe("주거·인테리어 결정");
+    expect(result.focusAnalysis?.understoodContext).toContain("1000만원");
+    expect(result.focusAnalysis?.directAnswer).toContain("확장 공사");
+    expect(result.focusAnalysis?.decisionChecklist).toHaveLength(5);
+    expect(result.focusAnalysis?.rule.id).toBe("money-fear-freeze");
+    expect(result.overallAssessment.focusConclusion).toContain("실제 공간 효용");
   });
 
   it("원국과 현재 세운을 합친 최종 종합 판정을 만든다", () => {

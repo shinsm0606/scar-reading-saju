@@ -137,6 +137,10 @@ export interface AnalysisResult {
     matchedKeywords: string[];
     rule: WarningRule;
     linkedWeakness: WarningRule;
+    scenarioLabel?: string;
+    understoodContext?: string;
+    directAnswer?: string;
+    decisionChecklist?: string[];
   };
   annualFlows: AnnualFlow[];
   overallAssessment: {

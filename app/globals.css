@@ -177,6 +177,16 @@ button { color: inherit; }
 .focus-question > span { color: var(--red-bright); font: 700 10px monospace; letter-spacing: .16em; }
 .focus-question blockquote { margin: 12px 0; color: var(--paper); font: 600 clamp(17px, 2vw, 22px)/1.7 var(--serif); white-space: pre-wrap; }
 .focus-question small { color: #7c7468; line-height: 1.6; }
+.focus-direct-answer { margin-bottom: 18px; border: 1px solid #594239; background: linear-gradient(135deg, #23130f, #12100d 65%); }
+.focus-direct-answer > header { display: grid; grid-template-columns: 180px 1fr; gap: 24px; padding: 20px 26px; border-bottom: 1px solid #3d3029; }
+.focus-direct-answer > header span, .focus-direct-answer > div > span { color: var(--red-bright); font: 700 10px monospace; letter-spacing: .1em; }
+.focus-direct-answer > header p { margin: 0; color: #9e9384; line-height: 1.7; }
+.focus-direct-answer > div { padding: clamp(24px, 4vw, 42px); }
+.focus-direct-answer > div h3 { margin: 13px 0 0; color: var(--paper); font: 700 clamp(22px, 3vw, 31px)/1.6 var(--serif); word-break: keep-all; }
+.focus-direct-answer ol { list-style: none; margin: 0; padding: 0 clamp(24px, 4vw, 42px) 30px; }
+.focus-direct-answer li { display: grid; grid-template-columns: 42px 1fr; gap: 10px; align-items: center; border-top: 1px solid #382e28; }
+.focus-direct-answer li > span { color: #74695d; font: 10px monospace; }
+.focus-direct-answer li p { color: #a69b8d; line-height: 1.65; }
 .empty-flow { border: 1px solid #39342c; background: #12110e; padding: 24px; color: #8f877a; line-height: 1.7; }
 .flow-notice, .spirit-disclaimer { display: grid; grid-template-columns: 180px 1fr; gap: 24px; border-left: 3px solid var(--red); background: #17130f; padding: 20px 24px; margin-bottom: 24px; }
 .flow-notice strong, .spirit-disclaimer strong { color: var(--red-bright); font: 700 11px monospace; letter-spacing: .08em; }
@@ -309,6 +319,7 @@ button { color: inherit; }
   .report-section { margin-bottom: 48px; }
   .report-section summary { grid-template-columns: 38px 1fr 28px; min-height: 90px; gap: 10px; }
   .flow-notice, .spirit-disclaimer { display: block; }
+  .focus-direct-answer > header { grid-template-columns: 1fr; gap: 9px; }
   .flow-notice strong, .spirit-disclaimer strong { display: block; margin-bottom: 8px; }
   .luck-option > header, .annual-intro { display: block; }
   .luck-option > header p { margin-top: 10px; }

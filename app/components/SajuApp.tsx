@@ -472,12 +472,31 @@ function Result({ name, concern, intensity, result, onRestart, onReview }: { nam
               <blockquote>“{concern}”</blockquote>
               <small>이 내용은 이 화면에서만 분석에 사용되며 공유 링크와 공유 이미지에는 포함되지 않습니다.</small>
             </div>
+            {result.focusAnalysis.directAnswer && (
+              <div className="focus-direct-answer">
+                <header>
+                  <span>질문 해석 · {result.focusAnalysis.scenarioLabel}</span>
+                  <p>{result.focusAnalysis.understoodContext}</p>
+                </header>
+                <div>
+                  <span>질문에 바로 답하면</span>
+                  <h3>{tone(result.focusAnalysis.directAnswer, intensity)}</h3>
+                </div>
+                {result.focusAnalysis.decisionChecklist && (
+                  <ol>
+                    {result.focusAnalysis.decisionChecklist.map((item, index) => (
+                      <li key={item}><span>{String(index + 1).padStart(2, "0")}</span><p>{tone(item, intensity)}</p></li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            )}
             <TextAnalysis
               title={result.focusAnalysis.rule.title}
               rule={result.focusAnalysis.rule}
               intensity={intensity}
               extra={[
-                `${result.focusAnalysis.linkedWeakness.title}이라는 원국 신호가 지금 고민의 취약 지점과 겹칩니다.`,
+                `사주상 교차판독: ${result.focusAnalysis.linkedWeakness.title}이라는 원국 신호가 지금 고민의 취약 지점과 겹칩니다.`,
                 result.focusAnalysis.matchedKeywords.length > 0
                   ? `입력한 내용에서 ${result.focusAnalysis.matchedKeywords.join(" · ")} 문제를 핵심 초점으로 잡았습니다.`
                   : "특정 결과를 예언하는 대신, 입력한 상황에서 반복될 행동과 판단 습관을 중심으로 읽었습니다.",
