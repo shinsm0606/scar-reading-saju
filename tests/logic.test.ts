@@ -167,6 +167,18 @@ describe("검증과 해석", () => {
     expect(result.overallAssessment.focusConclusion).toContain("실제 공간 효용");
   });
 
+  it("할까·말까 표현보다 인테리어 상황 분류를 우선한다", () => {
+    const chart = new KoreanManseCalculator().calculate(defaultInput);
+    const result = analyzeChart(chart, {
+      category: "general",
+      concern: "이번에 집 인테리어를 하는데 베란다 확장을 거실만 할까 말까 고민이야.",
+    }, 2026);
+    expect(result.focusAnalysis?.scenarioLabel).toBe("주거·인테리어 결정");
+    expect(result.focusAnalysis?.category).toBe("money");
+    expect(result.focusAnalysis?.directAnswer).toContain("확장 공사");
+    expect(result.focusAnalysis?.decisionChecklist?.[0]).toContain("확장 없이");
+  });
+
   it("원국과 현재 세운을 합친 최종 종합 판정을 만든다", () => {
     const chart = new KoreanManseCalculator().calculate(defaultInput);
     const result = analyzeChart(chart, undefined, 2026);

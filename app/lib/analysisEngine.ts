@@ -153,13 +153,15 @@ const concernScenarios: ConcernScenario[] = [
 ];
 
 function detectConcernScenario(normalized: string): ConcernScenario | undefined {
-  return concernScenarios
+  const ranked = concernScenarios
     .map((scenario) => ({
       scenario,
       matches: scenario.words.filter((word) => normalized.includes(word)).length,
     }))
     .filter(({ matches }) => matches > 0)
-    .sort((a, b) => b.matches - a.matches)[0]?.scenario;
+    .sort((a, b) => b.matches - a.matches);
+  const specific = ranked.find(({ scenario }) => scenario.id !== "general-decision");
+  return (specific ?? ranked[0])?.scenario;
 }
 
 function buildScenarioGuidance(
