@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { analyzeChart, buildPersonalizedActions, tone } from "../lib/analysisEngine";
 import { KoreanManseCalculator } from "../lib/fortuneCalculator";
 import { defaultInput } from "../lib/profiles";
+import { formatBranch, formatInteractions } from "../lib/sajuLabels";
 import { decodeSharePayload, encodeSharePayload, sanitizeChartForShare } from "../lib/share";
 import { deleteBirthInput, loadBirthInput, saveBirthInput } from "../lib/storage";
 import { validateBirthInput } from "../lib/validation";
@@ -21,6 +22,7 @@ const termCaptions: Record<string, string> = {
   "사주 원국": "태어난 연·월·일·시를 네 기둥, 여덟 글자로 정리한 기본 명식입니다.",
   천간: "각 기둥의 위 글자입니다. 겉으로 드러나는 작동 방식과 역할을 읽는 기준으로 씁니다.",
   지지: "각 기둥의 아래 글자입니다. 계절·환경·생활 바탕과 글자 사이의 관계를 살핍니다.",
+  "12지지": "자·축·인·묘·진·사·오·미·신·유·술·해 열두 글자입니다. 이 화면에서는 한자와 띠 동물을 함께 표시합니다.",
   일간: "일주의 천간입니다. 다른 오행과 십신을 판단할 때 기준점이 되는 ‘나’의 글자입니다.",
   오행: "목·화·토·금·수 다섯 작동 방식입니다. 좋고 나쁨보다 분포와 균형을 봅니다.",
   음양: "같은 오행 안에서도 밖으로 뻗는 양과 안으로 모이는 음의 방향성을 구분합니다.",
@@ -316,7 +318,8 @@ function LuckFlowReport({ chart, intensity }: { chart: AnalysisResult["chart"]; 
                   <span>{cycle.startAge}–{cycle.endAge}세</span>
                   <strong>{cycle.korean}</strong>
                   <b>{cycle.element} · {cycle.tenGod}/{cycle.branchTenGod}</b>
-                  <p className="luck-relations">{cycle.interactions.length ? cycle.interactions.join(" · ") : "원국 지지와 직접 관계 적음"}</p>
+                  <small className="branch-plain">지지 {formatBranch(cycle.branch)}</small>
+                  <p className="luck-relations">{cycle.interactions.length ? formatInteractions(cycle.interactions) : "원국 지지와 직접 관계 적음"}</p>
                   <p className="luck-assessment">{tone(
                     cycle.assessment ?? `${cycle.tenGod}/${cycle.branchTenGod} 역할이 강조되는 시기입니다. 원국과의 관계를 확인하며 속도보다 행동 기준을 먼저 세우십시오.`,
                     intensity,
@@ -349,10 +352,11 @@ function AnnualFlowReport({ result, intensity }: { result: AnalysisResult; inten
           <article className={`${flow.year === currentYear ? "current" : ""} pressure-${flow.pressure}`} key={flow.year}>
             <header><span>{flow.year === currentYear ? "현재 세운" : `${flow.year} YEAR`}</span><b>자극도 {flow.pressure}</b></header>
             <div className="annual-pillar"><strong>{flow.stem}</strong><strong>{flow.branch}</strong></div>
+            <p className="branch-plain">올해 지지 {formatBranch(flow.branch)}</p>
             <h3>{flow.korean}년 · {flow.tenGod}/{flow.branchTenGod}</h3>
             <p className="annual-theme">{flow.theme}</p>
             <dl>
-              <div><dt>원국 관계</dt><dd>{flow.interactions.length ? flow.interactions.join(" · ") : "직접적인 합·충·형·파·해가 적음"}</dd></div>
+              <div><dt>원국 관계</dt><dd>{flow.interactions.length ? formatInteractions(flow.interactions) : "직접적인 합·충·형·파·해가 적음"}</dd></div>
               <div><dt>경고</dt><dd>{tone(flow.warning, intensity)}</dd></div>
               <div><dt>행동</dt><dd>{tone(flow.action, intensity)}</dd></div>
             </dl>
@@ -549,18 +553,19 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
 
       <div className="report-body">
         <ReportSection number="A" title="사주 원국" subtitle="KOREAN FOUR PILLARS · 시일월년">
-          <TermCaptions terms={["사주 원국", "천간", "지지", "일간", "십신", "신강·신약", "합·충·형·파·해"]} />
+          <TermCaptions terms={["사주 원국", "천간", "지지", "12지지", "일간", "십신", "신강·신약", "합·충·형·파·해"]} />
           <div className="pillars">
             {[...chart.pillars].reverse().map((pillar) => (
               <article key={pillar.label} className="pillar">
                 <span>{pillar.label}</span>
                 <small>천간 · 위 글자</small><strong>{pillar.stem}</strong>
                 <small>지지 · 아래 글자</small><strong>{pillar.branch}</strong>
+                <em className="branch-plain">{pillar.branch === "?" ? "출생시간 미상" : formatBranch(pillar.branch)}</em>
                 <div><b>{pillar.element}/{pillar.branchElement}</b><b>{pillar.yinYang}/{pillar.branchYinYang}</b><b>{pillar.tenGod}/{pillar.branchTenGod}</b></div><p>{pillar.role}</p>
               </article>
             ))}
           </div>
-          <div className="chart-notes"><span>양력 환산 <strong>{chart.solarDate}</strong></span><span>음력 환산 <strong>{chart.lunarDate}</strong></span><span>일간 <strong>{chart.dayMaster}</strong></span><span>신강·신약 참고 <strong>{chart.strengthScore}</strong></span><span>합·충·형·파·해 <strong>{chart.interactions.join(" / ")}</strong></span></div>
+          <div className="chart-notes"><span>양력 환산 <strong>{chart.solarDate}</strong></span><span>음력 환산 <strong>{chart.lunarDate}</strong></span><span>일간 <strong>{chart.dayMaster}</strong></span><span>신강·신약 참고 <strong>{chart.strengthScore}</strong></span><span>합·충·형·파·해 <strong>{formatInteractions(chart.interactions)}</strong></span></div>
           <TenGodCaptions terms={chart.pillars.flatMap(({ tenGod, branchTenGod }) => [tenGod, branchTenGod])} />
         </ReportSection>
 

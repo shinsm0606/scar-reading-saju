@@ -7,6 +7,7 @@ import { tenGodInterpretations } from "../data/tenGodInterpretations";
 import type { AnalysisResult, Element, FortuneChart, Intensity, RiskLevel, WarningRule } from "../types/fortune";
 import { buildAnnualGuidance } from "./annualGuidance";
 import { calculateAnnualFlows } from "./flowCalculator";
+import { formatInteraction, formatInteractions } from "./sajuLabels";
 
 const weaknessRules = [
   ...dayMasterInterpretations,
@@ -120,7 +121,7 @@ function conditionEvidence(condition: string, chart: FortuneChart): string | nul
   if (type === "deficient") return `${value}가 ${chart.elementDistribution[value as Element]}개로 원국에서 가장 약합니다`;
   if (type === "tenGod") return `${value}이 원국에 ${chart.tenGodDistribution[value]}회 드러납니다`;
   if (type === "strength") return `신강·신약 참고 지표가 ${chart.strengthScore}로 ${value === "strong" ? "자기 지지력이 강한 편" : "외부 자극의 영향을 받기 쉬운 편"}입니다`;
-  if (type === "interaction") return `지지에서 ${matchingInteractions(chart, value).join(" · ")} 관계가 확인됩니다`;
+  if (type === "interaction") return `지지에서 ${formatInteractions(matchingInteractions(chart, value))} 관계가 확인됩니다`;
   return null;
 }
 
@@ -158,7 +159,7 @@ function selectFinalWarning(weaknesses: WarningRule[], chart: FortuneChart): str
   const endings = [
     `${primary.actionRules[0]}. 이것을 미루는 순간 강점은 같은 문제를 반복하는 핑계가 됩니다.`,
     `${primary.summary} ${primary.actionRules[0]}.`,
-    `${interaction ? `${interaction}의 긴장이 올라올수록` : "압박이 높아질수록"} ${primary.warningSigns[0]} 반응을 사실로 착각하지 마십시오.`,
+    `${interaction ? `${formatInteraction(interaction)}의 긴장이 올라올수록` : "압박이 높아질수록"} ${primary.warningSigns[0]} 반응을 사실로 착각하지 마십시오.`,
   ];
   return endings[chart.seed % endings.length];
 }

@@ -5,6 +5,7 @@ import { KoreanManseCalculator } from "../app/lib/fortuneCalculator";
 import { calculateAnnualFlows, detectSpiritStars } from "../app/lib/flowCalculator";
 import { defaultInput, demoProfiles } from "../app/lib/profiles";
 import { decodeSharePayload, encodeSharePayload, sanitizeChartForShare } from "../app/lib/share";
+import { formatBranch, formatInteraction, formatInteractions } from "../app/lib/sajuLabels";
 import { deleteBirthInput, loadBirthInput, saveBirthInput } from "../app/lib/storage";
 import { isValidDate, validateBirthInput } from "../app/lib/validation";
 
@@ -99,6 +100,18 @@ describe("KASI 기반 실제 만세력 계산", () => {
 });
 
 describe("검증과 해석", () => {
+  it("지지와 합충형파해를 일반인이 구분할 수 있는 표현으로 바꾼다", () => {
+    expect(formatBranch("해")).toBe("亥(해·돼지)");
+    expect(formatInteraction("유·술 해"))
+      .toBe("酉(유·닭)–戌(술·개) · 害 해(숨은 불편·엇갈림)");
+    expect(formatInteraction("신·해 해"))
+      .toBe("申(신·원숭이)–亥(해·돼지) · 害 해(숨은 불편·엇갈림)");
+    expect(formatInteractions(["자·축 합", "자·오 충"]))
+      .toContain("合 합(결합·협력) / 子(자·쥐)–午(오·말) · 沖 충(정면 충돌·큰 변화)");
+    expect(formatInteraction("뚜렷한 합·충·형·파·해 없음"))
+      .toBe("뚜렷한 합·충·형·파·해 없음");
+  });
+
   it("윤년과 존재하지 않는 날짜를 검증한다", () => {
     expect(isValidDate(2024, 2, 29)).toBe(true);
     expect(isValidDate(2023, 2, 29)).toBe(false);

@@ -16,6 +16,7 @@ import type {
   LuckOption,
   SpiritStar,
 } from "../types/fortune";
+import { formatInteractions } from "./sajuLabels";
 
 const relationSets: Record<string, string[]> = {
   합: ["자축", "인해", "묘술", "진유", "사신", "오미"],
@@ -118,9 +119,9 @@ function convertLuckOption(
           ? `이미 강한 ${element}가 더해져 장점이 과속하기 쉬우므로 검토 기준이 필요하고`
           : `${element}가 새로운 역할을 요구하므로 기존 방식만 고집하지 않는 것이 중요하고`;
       const relationReading = difficultRelations.length > 0
-        ? `${difficultRelations.join(" · ")} 자극이 있어 변화와 갈등을 한 번에 결론내리지 마십시오.`
+        ? `${formatInteractions(difficultRelations)} 자극이 있어 변화와 갈등을 한 번에 결론내리지 마십시오.`
         : combinedRelations.length > 0
-          ? `${combinedRelations.join(" · ")} 흐름은 협력에 유리하지만 역할과 책임은 분리해야 합니다.`
+          ? `${formatInteractions(combinedRelations)} 흐름은 협력에 유리하지만 역할과 책임은 분리해야 합니다.`
           : "원국과의 직접 충돌이 적어 한 분야를 꾸준히 축적하는 편이 유리합니다.";
       const roleTheme = tenGodThemes[tenGod]
         ? `${tenGod}: ${tenGodThemes[tenGod].theme.replace(/해$/, "10년")}`

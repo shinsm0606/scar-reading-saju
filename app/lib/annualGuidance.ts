@@ -1,5 +1,6 @@
 import { excessEnvironmentRules, foodCautions, peopleCautions, placeRules } from "../data/environmentGuidance";
 import type { AnnualFlow, AnnualGuidance, Element, FortuneChart } from "../types/fortune";
+import { formatInteractions } from "./sajuLabels";
 
 export function buildAnnualGuidance(chart: FortuneChart, annual: AnnualFlow): AnnualGuidance {
   const elementEntries = Object.entries(chart.elementDistribution) as [Element, number][];
@@ -36,8 +37,8 @@ export function buildAnnualGuidance(chart: FortuneChart, annual: AnnualFlow): An
     cautions.push({
       category: "이동·자동차",
       basis: travelHorse
-        ? `원국 역마 신호${difficultRelations.length ? ` + 세운 ${difficultRelations.join(" · ")}` : ""}`
-        : `세운 ${difficultRelations.join(" · ")}`,
+        ? `원국 역마 신호${difficultRelations.length ? ` + 세운 ${formatInteractions(difficultRelations)}` : ""}`
+        : `세운 ${formatInteractions(difficultRelations)}`,
       advice: "장거리 이동은 출발 시간을 촘촘하게 잡지 말고, 차량 점검·보험·주차·복귀 시간을 먼저 확인하십시오. 이는 사고 예측이 아니라 이동이 많아질 때 생기는 판단 누락을 막는 수칙입니다.",
     });
   }

@@ -149,6 +149,7 @@ button { color: inherit; }
 .pillar > strong { display: block; font: 700 52px/1.25 var(--serif); }
 .pillar > strong:nth-of-type(1) { color: #d5c9b0; }
 .pillar > strong:nth-of-type(2) { color: var(--red-bright); border-top: 1px solid #342f28; padding-top: 4px; }
+.branch-plain { display: block; margin: 5px 0 0; color: #867c6e; font: normal 10px/1.5 var(--sans); word-break: keep-all; }
 .pillar div { display: flex; justify-content: center; gap: 5px; margin-top: 15px; }
 .pillar b { border: 1px solid #443d33; padding: 5px 7px; color: #948a7b; font-size: 10px; font-weight: 500; }
 .pillar p { min-height: 36px; color: #665f55; font-size: 10px; line-height: 1.55; }
@@ -201,6 +202,7 @@ button { color: inherit; }
 .luck-track article > span { color: #756e63; font: 10px monospace; }
 .luck-track article > strong { display: block; margin: 18px 0 8px; color: var(--paper); font: 700 35px var(--serif); }
 .luck-track article > b { color: #b8ac9a; font-size: 12px; }
+.luck-track article > .branch-plain { margin-top: 6px; }
 .luck-track article > p { font-size: 11px; line-height: 1.65; }
 .luck-relations { color: #746c61; min-height: 36px; }
 .luck-assessment { margin-top: 16px; padding-top: 15px; border-top: 1px solid #302a24; color: #aaa091; }
@@ -218,6 +220,7 @@ button { color: inherit; }
 .annual-grid article.pressure-낮음 > header b { color: #73917a; }
 .annual-pillar { display: flex; gap: 6px; margin: 22px 0 12px; }
 .annual-pillar strong { display: grid; place-items: center; width: 52px; height: 58px; border: 1px solid #4a4339; color: var(--paper); font: 700 30px var(--serif); }
+.annual-pillar + .branch-plain { margin: -6px 0 10px; }
 .annual-grid h3 { margin: 0; font: 700 21px var(--serif); }
 .annual-theme { min-height: 48px; color: #a99e8e; line-height: 1.6; }
 .annual-grid dl { margin: 18px 0 0; }
