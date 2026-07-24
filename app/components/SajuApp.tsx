@@ -268,7 +268,8 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
     wrapCanvasText(ctx, `“${tone(result.finalWarning, intensity)}”`, 76, 970, 890, 62);
     ctx.fillStyle = "#171512"; ctx.fillRect(76, 1245, 928, 92);
     ctx.fillStyle = "#9b8f7d"; ctx.font = "22px sans-serif"; ctx.fillText("서비스 주소", 102, 1283);
-    ctx.fillStyle = "#efe7d3"; ctx.font = "24px monospace"; ctx.fillText(window.location.origin, 102, 1319);
+    const serviceUrl = new URL(".", window.location.href).toString().split("?")[0];
+    ctx.fillStyle = "#efe7d3"; ctx.font = "24px monospace"; ctx.fillText(serviceUrl, 102, 1319);
     ctx.textAlign = "right"; ctx.fillStyle = "#756b5d"; ctx.font = "20px sans-serif"; ctx.fillText("자기 성찰용 데모 콘텐츠", 980, 1310);
     const link = document.createElement("a");
     link.download = `${name}-사주-경고보고서.png`; link.href = canvas.toDataURL("image/png"); link.click();

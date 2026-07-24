@@ -19,7 +19,10 @@ npm run dev
 npm run test
 npm run lint
 npm run build
+npm run build:pages
 ```
+
+GitHub Pages 전용 로컬 실행은 `npm run dev:pages`를 사용합니다. 정적 배포 결과는 `docs/`에 생성되며, 공개 주소는 `https://shinsm0606.github.io/scar-reading-saju/`입니다.
 
 ## 구현 기능
 
