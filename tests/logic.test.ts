@@ -179,6 +179,20 @@ describe("검증과 해석", () => {
     expect(result.focusAnalysis?.decisionChecklist?.[0]).toContain("확장 없이");
   });
 
+  it("친구에게 다시 물어볼지 묻는 질문에는 재접촉 시점과 문장을 직접 제안한다", () => {
+    const chart = new KoreanManseCalculator().calculate(defaultInput);
+    const result = analyzeChart(chart, {
+      category: "general",
+      concern: "친구가 화가 났는데 이유를 모르겠어 그래서 4일이 지난 지금 다시 그 이야기를 물어보는게 맞을까?",
+    }, 2026);
+    expect(result.focusAnalysis?.scenarioLabel).toBe("관계 회복·재접촉");
+    expect(result.focusAnalysis?.category).toBe("relationship");
+    expect(result.focusAnalysis?.understoodContext).toContain("4일이 지난 지금");
+    expect(result.focusAnalysis?.directAnswer).toContain("네. 이유를 모른 채 시간이 지났다면");
+    expect(result.focusAnalysis?.directAnswer).toContain("편할 때 알려줘");
+    expect(result.focusAnalysis?.rule.id).toBe("relationship-mind-reading");
+  });
+
   it("원국과 현재 세운을 합친 최종 종합 판정을 만든다", () => {
     const chart = new KoreanManseCalculator().calculate(defaultInput);
     const result = analyzeChart(chart, undefined, 2026);

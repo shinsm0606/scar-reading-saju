@@ -100,7 +100,7 @@ const concernKeywords: Record<Exclude<ConcernCategory, "general">, Array<{ words
 };
 
 type ConcernScenario = {
-  id: "home-project" | "career-change" | "investment" | "relationship-decision" | "recovery" | "general-decision";
+  id: "home-project" | "career-change" | "investment" | "relationship-repair" | "relationship-decision" | "recovery" | "general-decision";
   category: Exclude<ConcernCategory, "general">;
   label: string;
   words: string[];
@@ -128,6 +128,13 @@ const concernScenarios: ConcernScenario[] = [
     label: "투자·대출 결정",
     words: ["투자", "주식", "코인", "대출", "보증", "공동투자"],
     preferredRuleId: "money-emotional",
+  },
+  {
+    id: "relationship-repair",
+    category: "relationship",
+    label: "관계 회복·재접촉",
+    words: ["화가 났", "화났", "이유를 모르", "다시 물어", "대화를 다시", "며칠", "사과할", "풀고 싶"],
+    preferredRuleId: "relationship-mind-reading",
   },
   {
     id: "relationship-decision",
@@ -206,6 +213,21 @@ function buildScenarioGuidance(
       decisionChecklist: ["손실 가능한 최대 금액을 먼저 정한다.", "수익 설명과 반대되는 자료를 확인한다.", "대출·보증·명의 대여를 분리해 검토한다.", "지인 제안도 계약과 종료 조건을 문서로 남긴다."],
     };
   }
+  if (scenario.id === "relationship-repair") {
+    const elapsedDays = concern.match(/(\d+)\s*일/)?.[1];
+    return {
+      scenarioLabel: scenario.label,
+      understoodContext: `친구가 화난 이유를 모르는 상태에서${elapsedDays ? ` ${elapsedDays}일이 지난 지금` : ""}, 먼저 다시 대화를 요청해도 되는지 묻는 문제로 읽었습니다.`,
+      directAnswer: `네. 이유를 모른 채 시간이 지났다면 지금 한 번 차분히 물어보는 편이 낫습니다. 다만 추궁하거나 답을 재촉하지 마십시오. “며칠 전 네가 화가 난 것 같아서 마음에 걸려. 내가 불편하게 한 게 있다면 알고 싶어. 지금 말하기 어렵다면 편할 때 알려줘.” 정도로 한 번만 보내십시오. ${commonPrefix}`,
+      decisionChecklist: [
+        "관찰한 사실만 말하고 상대의 의도를 단정하지 않는다.",
+        "무엇이 불편했는지 알고 싶다는 질문을 한 번만 보낸다.",
+        "즉시 답장이나 화해를 요구하지 않고 상대가 답할 시간을 둔다.",
+        "구체적인 이유를 들으면 해명보다 먼저 상대가 불편했던 지점을 확인한다.",
+        "이유 설명 없이 분노와 침묵이 반복된다면 관계의 대화 규칙과 경계를 다시 합의한다.",
+      ],
+    };
+  }
   if (scenario.id === "relationship-decision") {
     return {
       scenarioLabel: scenario.label,
@@ -270,7 +292,7 @@ function buildFocusAnalysis(
       rule,
       score: (ruleScore(rule, chart) ?? 0)
         + routes.filter((route) => route.ruleId === rule.id).length * 60
-        + (scenario?.preferredRuleId === rule.id ? 80 : 0)
+        + (scenario?.preferredRuleId === rule.id ? 200 : 0)
         + stableHash(`${chart.seed}:${normalized}:${rule.id}`) % 1000 / 1000,
     }))
     .sort((a, b) => b.score - a.score);
