@@ -4,7 +4,13 @@ import { analyzeChart, buildPersonalizedActions, calculateRisk, deduplicateWarni
 import { KoreanManseCalculator } from "../app/lib/fortuneCalculator";
 import { calculateAnnualFlows, detectSpiritStars } from "../app/lib/flowCalculator";
 import { defaultInput, demoProfiles } from "../app/lib/profiles";
-import { decodeSharePayload, encodeSharePayload, sanitizeChartForShare } from "../app/lib/share";
+import {
+  buildShareUrl,
+  decodeSharePayload,
+  decodeSharePayloadFromUrl,
+  encodeSharePayload,
+  sanitizeChartForShare,
+} from "../app/lib/share";
 import { formatBranch, formatInteraction, formatInteractions } from "../app/lib/sajuLabels";
 import { deleteBirthInput, loadBirthInput, saveBirthInput } from "../app/lib/storage";
 import { isValidDate, validateBirthInput } from "../app/lib/validation";
@@ -258,5 +264,30 @@ describe("저장과 공유 개인정보", () => {
     expect(decoded?.chart.solarDate).toBe("공유본에서 제외");
     expect(decoded?.chart.lunarDate).toBe("공유본에서 제외");
     expect(decoded?.chart.calculationBasis).not.toContain(defaultInput.region);
+  });
+
+  it("공유 데이터는 서버에 전송되지 않는 URL 해시에 넣는다", () => {
+    const payload = {
+      v: 2 as const,
+      name: "공유자",
+      intensity: "direct" as const,
+      chart: sanitizeChartForShare(new KoreanManseCalculator().calculate(defaultInput)),
+    };
+    const shareUrl = buildShareUrl("https://example.com/scar-reading-saju/?old=1", payload);
+    const parsedUrl = new URL(shareUrl);
+    expect(parsedUrl.search).toBe("");
+    expect(parsedUrl.hash).toMatch(/^#report=/);
+    expect(decodeSharePayloadFromUrl(shareUrl)?.chart.pillars).toEqual(payload.chart.pillars);
+  });
+
+  it("기존 쿼리 방식 공유 링크도 계속 읽는다", () => {
+    const payload = {
+      v: 2 as const,
+      name: "이전 링크",
+      intensity: "realistic" as const,
+      chart: sanitizeChartForShare(new KoreanManseCalculator().calculate(defaultInput)),
+    };
+    const legacyUrl = `https://example.com/?report=${encodeSharePayload(payload)}`;
+    expect(decodeSharePayloadFromUrl(legacyUrl)?.name).toBe("이전 링크");
   });
 });

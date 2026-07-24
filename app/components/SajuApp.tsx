@@ -5,7 +5,7 @@ import { analyzeChart, buildPersonalizedActions, tone } from "../lib/analysisEng
 import { KoreanManseCalculator } from "../lib/fortuneCalculator";
 import { defaultInput } from "../lib/profiles";
 import { formatBranch, formatInteractions } from "../lib/sajuLabels";
-import { decodeSharePayload, encodeSharePayload, sanitizeChartForShare } from "../lib/share";
+import { buildShareUrl, decodeSharePayloadFromUrl, sanitizeChartForShare } from "../lib/share";
 import { deleteBirthInput, loadBirthInput, saveBirthInput } from "../lib/storage";
 import { validateBirthInput } from "../lib/validation";
 import type { AnalysisResult, BirthInput, Element, Intensity, SharePayload, WarningRule } from "../types/fortune";
@@ -492,9 +492,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
   };
   const copyLink = async () => {
     const payload: SharePayload = { v: 2, name, intensity, chart: sanitizeChartForShare(chart) };
-    const url = new URL(window.location.href);
-    url.search = `?report=${encodeSharePayload(payload)}`;
-    await navigator.clipboard.writeText(url.toString());
+    await navigator.clipboard.writeText(buildShareUrl(window.location.href, payload));
     notify("개인 생년정보를 제외한 공유 링크를 복사했습니다.");
   };
   const saveImage = () => {
@@ -520,7 +518,10 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
     wrapCanvasText(ctx, `“${tone(result.finalWarning, intensity)}”`, 76, 970, 890, 62);
     ctx.fillStyle = "#171512"; ctx.fillRect(76, 1245, 928, 92);
     ctx.fillStyle = "#9b8f7d"; ctx.font = "22px sans-serif"; ctx.fillText("서비스 주소", 102, 1283);
-    const serviceUrl = new URL(".", window.location.href).toString().split("?")[0];
+    const serviceUrlObject = new URL(".", window.location.href);
+    serviceUrlObject.search = "";
+    serviceUrlObject.hash = "";
+    const serviceUrl = serviceUrlObject.toString();
     ctx.fillStyle = "#efe7d3"; ctx.font = "24px monospace"; ctx.fillText(serviceUrl, 102, 1319);
     ctx.textAlign = "right"; ctx.fillStyle = "#756b5d"; ctx.font = "20px sans-serif"; ctx.fillText("자기 성찰용 참고 콘텐츠", 980, 1310);
     const link = document.createElement("a");
@@ -702,8 +703,7 @@ export function SajuApp() {
   const timer = useRef<number | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const shared = decodeSharePayload(params.get("report") ?? "");
+    const shared = decodeSharePayloadFromUrl(window.location.href);
     if (shared) {
       queueMicrotask(() => {
         setInput((current) => ({ ...current, name: shared.name, intensity: shared.intensity }));

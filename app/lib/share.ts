@@ -30,3 +30,17 @@ export function decodeSharePayload(value: string): SharePayload | null {
     return null;
   }
 }
+
+export function buildShareUrl(currentUrl: string, payload: SharePayload): string {
+  const url = new URL(currentUrl);
+  url.search = "";
+  url.hash = new URLSearchParams({ report: encodeSharePayload(payload) }).toString();
+  return url.toString();
+}
+
+export function decodeSharePayloadFromUrl(urlValue: string): SharePayload | null {
+  const url = new URL(urlValue, "https://share.local/");
+  const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+  const searchParams = new URLSearchParams(url.search);
+  return decodeSharePayload(hashParams.get("report") ?? searchParams.get("report") ?? "");
+}
