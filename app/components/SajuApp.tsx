@@ -123,7 +123,7 @@ function InputForm({ initial, onSubmit, onBack }: { initial: BirthInput; onSubmi
                   {Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{String(hour).padStart(2, "0")}시</option>)}
                 </select>
                 <select aria-label="출생 분" value={input.minute} disabled={input.timeUnknown} onChange={(e) => update("minute", Number(e.target.value))}>
-                  {[0, 10, 20, 30, 40, 50].map((minute) => <option key={minute} value={minute}>{String(minute).padStart(2, "0")}분</option>)}
+                  {Array.from({ length: 60 }, (_, minute) => <option key={minute} value={minute}>{String(minute).padStart(2, "0")}분</option>)}
                 </select>
               </div>
               <label className="check-line"><input type="checkbox" checked={input.timeUnknown} onChange={(e) => update("timeUnknown", e.target.checked)} /> 출생 시간을 모름</label>
@@ -132,7 +132,7 @@ function InputForm({ initial, onSubmit, onBack }: { initial: BirthInput; onSubmi
             <Field label="출생 지역" error={errors.region}>
               <input id="region" value={input.region} onChange={(e) => update("region", e.target.value)} />
               <label className="check-line"><input type="checkbox" checked={input.trueSolarTime} disabled={input.timeUnknown} onChange={(e) => update("trueSolarTime", e.target.checked)} /> 출생 지역 기반 진태양시 보정</label>
-              <p className="field-help">기본은 입력한 한국 표준시를 그대로 사용합니다. 보정하면 알려진 국내 도시의 경도·균시차·과거 서머타임을 반영합니다.</p>
+              <p className="field-help">기본으로 국내 도시의 경도·균시차·과거 표준시와 서머타임을 반영합니다. 다른 만세력과 비교할 때는 보정 기준도 함께 확인하십시오.</p>
             </Field>
             <Field label="풀이 강도" className="wide">
               <div className="intensity-row">
@@ -283,7 +283,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
         <div>
           <p className="eyebrow"><span /> CONFIDENTIAL WARNING REPORT</p>
           <h1><em>{name}</em>님의<br />사주 경고 보고서</h1>
-          <div className="demo-badge">KASI 기반 만세력 · 원국 신뢰도 {chart.confidence}%</div>
+          <div className="demo-badge">KASI 기반 한국 만세력</div>
           <p>{chart.calculationBasis}. 원국은 오픈소스 계산 결과를 그대로 사용하며 해석 문장만 규칙 기반으로 조합합니다.</p>
         </div>
         <div className={`risk-seal risk-${result.riskLevel}`} aria-label={`종합 위험 등급 ${result.riskLevel}`}>
@@ -293,9 +293,9 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
       <p className="risk-caption">위험 등급은 불행의 크기가 아니라, 반복되는 약점을 방치했을 때의 위험도를 의미합니다.</p>
 
       <div className="report-body">
-        <ReportSection number="A" title="사주 원국" subtitle="DEMO FOUR PILLARS">
+        <ReportSection number="A" title="사주 원국" subtitle="KOREAN FOUR PILLARS · 시일월년">
           <div className="pillars">
-            {chart.pillars.map((pillar) => (
+            {[...chart.pillars].reverse().map((pillar) => (
               <article key={pillar.label} className="pillar">
                 <span>{pillar.label}</span><strong>{pillar.stem}</strong><strong>{pillar.branch}</strong>
                 <div><b>{pillar.element}/{pillar.branchElement}</b><b>{pillar.yinYang}/{pillar.branchYinYang}</b><b>{pillar.tenGod}/{pillar.branchTenGod}</b></div><p>{pillar.role}</p>

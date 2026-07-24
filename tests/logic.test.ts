@@ -17,6 +17,16 @@ describe("KASI 기반 실제 만세력 계산", () => {
     expect(chart.mode).toBe("manse");
   });
 
+  it("1994-06-06 04:30 서울 보정 원국이 갑술·기사·계해·갑인이다", () => {
+    const chart = new KoreanManseCalculator().calculate({
+      ...defaultInput, name: "대조", gender: "male", calendarType: "solar",
+      year: 1994, month: 6, day: 6, hour: 4, minute: 30,
+      region: "대한민국 서울", trueSolarTime: true,
+    });
+    expect(chart.pillars.map(({ stem, branch }) => `${stem}${branch}`))
+      .toEqual(["갑술", "기사", "계해", "갑인"]);
+  });
+
   it("같은 입력은 항상 같은 원국과 해석 시드를 만든다", () => {
     const calculator = new KoreanManseCalculator();
     expect(calculator.calculate(defaultInput)).toEqual(calculator.calculate(defaultInput));
