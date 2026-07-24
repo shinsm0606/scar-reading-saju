@@ -297,6 +297,74 @@ function AnnualFlowReport({ result, intensity }: { result: AnalysisResult; inten
   );
 }
 
+function AnnualGuidanceReport({ result, intensity }: { result: AnalysisResult; intensity: Intensity }) {
+  const guidance = result.annualGuidance;
+  return (
+    <div className="environment-report">
+      <header>
+        <div>
+          <span>YEARLY ENVIRONMENT PRESCRIPTION</span>
+          <h3>{tone(guidance.headline, intensity)}</h3>
+          <p>{guidance.basis}</p>
+        </div>
+        <div className="direction-seal">
+          <span>보완 방위</span>
+          <strong>{guidance.direction}</strong>
+          <b>{guidance.supportiveElement}</b>
+        </div>
+      </header>
+
+      <section>
+        <div className="environment-title">
+          <span>01</span>
+          <div><strong>실제로 가볼 만한 장소</strong><p>장소명은 행운을 보장하는 목적지가 아니라, 필요한 환경을 현실에서 찾기 위한 방문 후보입니다.</p></div>
+        </div>
+        <div className="place-grid">
+          {guidance.recommendedPlaces.map((place) => (
+            <article key={place.name}>
+              <span>{place.category}</span>
+              <h4>{place.name}</h4>
+              <p>{place.reason}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <div className="environment-title">
+          <span>02</span>
+          <div><strong>올해 오래 머물지 말아야 할 환경</strong><p>특정 지역의 불운이 아니라, 원국의 과한 반응을 더 키우는 환경 유형입니다.</p></div>
+        </div>
+        <div className="reduce-grid">
+          {guidance.reduceEnvironments.map((item) => (
+            <article key={item.environment}><strong>{item.environment}</strong><p>{item.reason}</p></article>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <div className="environment-title">
+          <span>03</span>
+          <div><strong>문서·음식·사람·이동 경계</strong><p>실제 원국 또는 올해 세운 근거가 있는 항목만 표시합니다.</p></div>
+        </div>
+        <div className="caution-grid">
+          {guidance.cautions.map((item) => (
+            <article key={item.category}>
+              <header><strong>{item.category}</strong><span>{item.basis}</span></header>
+              <p>{tone(item.advice, intensity)}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <p className="environment-disclaimer">
+        오행의 전통적 방위인 목–동, 화–남, 토–중앙, 금–서, 수–북을 생활 환경에 적용한 자기 성찰용 해석입니다.
+        여행 안전, 음식 선택, 계약과 차량 관리는 날씨·건강 상태·공식 안내·전문 자료를 우선하십시오.
+      </p>
+    </div>
+  );
+}
+
 function SpiritStarReport({ chart, intensity }: { chart: AnalysisResult["chart"]; intensity: Intensity }) {
   const stars = chart.spiritStars ?? [];
   if (stars.length === 0) {
@@ -454,23 +522,27 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
           <AnnualFlowReport result={result} intensity={intensity} />
         </ReportSection>
 
-        <ReportSection number="F" title="재미로 보는 보조 신살" subtitle="SYMBOLIC STARS">
+        <ReportSection number="F" title="올해의 환경 처방" subtitle="PLACE & DAILY CAUTION">
+          <AnnualGuidanceReport result={result} intensity={intensity} />
+        </ReportSection>
+
+        <ReportSection number="G" title="재미로 보는 보조 신살" subtitle="SYMBOLIC STARS">
           <SpiritStarReport chart={chart} intensity={intensity} />
         </ReportSection>
 
-        <ReportSection number="G" title="절대 하면 안 되는 행동 5가지" subtitle="DO NOT">
+        <ReportSection number="H" title="절대 하면 안 되는 행동 5가지" subtitle="DO NOT">
           <ol className="command-list prohibited">
             {personalizedActions.prohibited.map((item, index) => <li key={item}><span>{index + 1}</span>{tone(item, intensity)}</li>)}
           </ol>
         </ReportSection>
 
-        <ReportSection number="H" title="당신을 살리는 행동 5가지" subtitle="SURVIVAL RULES">
+        <ReportSection number="I" title="당신을 살리는 행동 5가지" subtitle="SURVIVAL RULES">
           <ol className="command-list rescue">
             {personalizedActions.rescue.map((item, index) => <li key={item}><span>{index + 1}</span>{tone(item, intensity)}</li>)}
           </ol>
         </ReportSection>
 
-        <ReportSection number="I" title="최종 종합 판정" subtitle="OVERALL ASSESSMENT">
+        <ReportSection number="J" title="최종 종합 판정" subtitle="OVERALL ASSESSMENT">
           <div className="overall-assessment">
             <header>
               <div className="overall-grade">
@@ -514,7 +586,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
         </ReportSection>
 
         <section className="final-warning reveal">
-          <p>J · FINAL WARNING</p>
+          <p>K · FINAL WARNING</p>
           <blockquote>“{tone(result.finalWarning, intensity)}”</blockquote>
           <span>운명은 확정된 사건이 아니라, 반복되는 선택을 알아차릴 때 달라지는 패턴입니다.</span>
         </section>

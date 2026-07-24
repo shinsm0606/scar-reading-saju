@@ -179,6 +179,26 @@ describe("검증과 해석", () => {
     });
   });
 
+  it("올해 부족 오행에 맞는 실제 장소와 생활 경계 근거를 만든다", () => {
+    const chart = new KoreanManseCalculator().calculate(defaultInput);
+    const result = analyzeChart(chart, 2026);
+    const minimum = Math.min(...Object.values(chart.elementDistribution));
+    expect(chart.elementDistribution[result.annualGuidance.supportiveElement]).toBe(minimum);
+    expect(result.annualGuidance.recommendedPlaces).toHaveLength(3);
+    expect(result.annualGuidance.recommendedPlaces.every(({ name }) => name.length >= 3)).toBe(true);
+    expect(result.annualGuidance.cautions.every(({ basis, advice }) => basis.length > 0 && advice.length > 20)).toBe(true);
+  });
+
+  it("이동·자동차 경고는 역마나 세운 충형파해 근거가 있을 때만 표시한다", () => {
+    const calculator = new KoreanManseCalculator();
+    demoProfiles.forEach(({ input }) => {
+      const chart = calculator.calculate(input);
+      const result = analyzeChart(chart, 2026);
+      const transport = result.annualGuidance.cautions.find(({ category }) => category === "이동·자동차");
+      if (transport) expect(transport.basis).toMatch(/역마|충|형|파|해/);
+    });
+  });
+
   it("년지·일지 삼합 기준 도화와 역마를 재현 가능하게 판정한다", () => {
     const stars = detectSpiritStars("자", "진", "갑", ["자", "진", "유", "인"]);
     expect(stars.find(({ id }) => id === "peach-blossom")?.present).toBe(true);

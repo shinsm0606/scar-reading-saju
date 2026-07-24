@@ -98,6 +98,28 @@ export interface AnnualFlow {
   action: string;
 }
 
+export interface AnnualGuidance {
+  year: number;
+  supportiveElement: Element;
+  direction: string;
+  headline: string;
+  basis: string;
+  recommendedPlaces: Array<{
+    name: string;
+    category: string;
+    reason: string;
+  }>;
+  reduceEnvironments: Array<{
+    environment: string;
+    reason: string;
+  }>;
+  cautions: Array<{
+    category: "문서" | "음식" | "사람" | "이동·자동차";
+    basis: string;
+    advice: string;
+  }>;
+}
+
 export interface SpiritStar {
   id: "peach-blossom" | "travel-horse" | "canopy" | "noble-helper";
   name: string;
@@ -132,6 +154,7 @@ export interface AnalysisResult {
   weaknessEvidence: Record<string, string>;
   finalWarning: string;
   annualFlows: AnnualFlow[];
+  annualGuidance: AnnualGuidance;
   overallAssessment: {
     verdict: string;
     headline: string;

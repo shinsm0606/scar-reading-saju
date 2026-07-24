@@ -5,6 +5,7 @@ import { elementInterpretations } from "../data/elementInterpretations";
 import { interactionInterpretations } from "../data/interactionInterpretations";
 import { tenGodInterpretations } from "../data/tenGodInterpretations";
 import type { AnalysisResult, Element, FortuneChart, Intensity, RiskLevel, WarningRule } from "../types/fortune";
+import { buildAnnualGuidance } from "./annualGuidance";
 import { calculateAnnualFlows } from "./flowCalculator";
 
 const weaknessRules = [
@@ -226,6 +227,7 @@ export function analyzeChart(chart: FortuneChart, referenceYear = new Date().get
     weaknessEvidence,
     finalWarning: selectFinalWarning(weaknesses, chart),
     annualFlows,
+    annualGuidance: buildAnnualGuidance(chart, annualFlows[2]),
   };
   return { ...partialResult, overallAssessment: buildOverallAssessment(partialResult) };
 }
