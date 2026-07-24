@@ -17,6 +17,7 @@ export interface BirthInput {
   minute: number;
   timeUnknown: boolean;
   region: string;
+  trueSolarTime: boolean;
   intensity: Intensity;
   allowStorage: boolean;
 }
@@ -26,13 +27,16 @@ export interface Pillar {
   stem: string;
   branch: string;
   element: Element | "?";
+  branchElement: Element | "?";
   yinYang: YinYang | "?";
+  branchYinYang: YinYang | "?";
   tenGod: string;
+  branchTenGod: string;
   role: string;
 }
 
 export interface FortuneChart {
-  mode: "demo";
+  mode: "manse";
   seed: number;
   pillars: Pillar[];
   dayMaster: string;
@@ -44,6 +48,9 @@ export interface FortuneChart {
   excessiveElements: Element[];
   interactions: string[];
   confidence: number;
+  calculationBasis: string;
+  solarDate: string;
+  lunarDate: string;
 }
 
 export interface WarningRule {
@@ -69,11 +76,10 @@ export interface AnalysisResult {
 }
 
 export interface SharePayload {
-  v: 1;
+  v: 2;
   name: string;
   intensity: Intensity;
-  seed: number;
-  timeUnknown: boolean;
+  chart: FortuneChart;
 }
 
 export interface FortuneCalculator {

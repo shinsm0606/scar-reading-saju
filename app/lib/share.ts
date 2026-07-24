@@ -13,7 +13,7 @@ export function decodeSharePayload(value: string): SharePayload | null {
     const binary = atob(normalized);
     const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
     const parsed = JSON.parse(new TextDecoder().decode(bytes)) as SharePayload;
-    if (parsed.v !== 1 || !parsed.name || !Number.isInteger(parsed.seed)) return null;
+    if (parsed.v !== 2 || !parsed.name || parsed.chart?.mode !== "manse") return null;
     return parsed;
   } catch {
     return null;

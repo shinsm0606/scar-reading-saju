@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { analyzeChart, sectionRules, tone } from "../lib/analysisEngine";
-import { calculateDemoChartFromSeed, DemoFortuneCalculator } from "../lib/fortuneCalculator";
+import { KoreanManseCalculator } from "../lib/fortuneCalculator";
 import { defaultInput } from "../lib/profiles";
 import { decodeSharePayload, encodeSharePayload } from "../lib/share";
 import { deleteBirthInput, loadBirthInput, saveBirthInput } from "../lib/storage";
@@ -86,7 +86,7 @@ function InputForm({ initial, onSubmit, onBack }: { initial: BirthInput; onSubmi
         <div className="section-number">01</div>
         <p className="eyebrow"><span /> 분석 대상 기록</p>
         <h1>당신의 시간을<br />정확히 기록하십시오.</h1>
-        <p className="form-lead">입력값은 데모 분석의 시드로만 사용됩니다. 저장에 동의하지 않으면 브라우저를 닫는 즉시 남지 않습니다.</p>
+        <p className="form-lead">입력값으로 한국 표준시와 절기 절입 시각을 반영한 사주 원국을 계산합니다. 저장에 동의하지 않으면 브라우저를 닫는 즉시 남지 않습니다.</p>
 
         <form onSubmit={submit} noValidate>
           <div className="form-grid">
@@ -108,7 +108,7 @@ function InputForm({ initial, onSubmit, onBack }: { initial: BirthInput; onSubmi
               <label className={`check-line ${input.calendarType !== "lunar" ? "disabled" : ""}`}>
                 <input type="checkbox" checked={input.leapMonth} disabled={input.calendarType !== "lunar"} onChange={(e) => update("leapMonth", e.target.checked)} /> 윤달
               </label>
-              {input.calendarType === "lunar" && <p className="field-help">데모 모드는 음력 선택을 시드에 반영하지만 실제 양력 변환은 수행하지 않습니다.</p>}
+              {input.calendarType === "lunar" && <p className="field-help">KASI 정본 음력 데이터로 양력 변환 후 절기 기준 원국을 계산합니다.</p>}
             </Field>
             <Field label="출생일" error={errors.date} className="wide">
               <div className="date-row">
@@ -131,6 +131,8 @@ function InputForm({ initial, onSubmit, onBack }: { initial: BirthInput; onSubmi
             </Field>
             <Field label="출생 지역" error={errors.region}>
               <input id="region" value={input.region} onChange={(e) => update("region", e.target.value)} />
+              <label className="check-line"><input type="checkbox" checked={input.trueSolarTime} disabled={input.timeUnknown} onChange={(e) => update("trueSolarTime", e.target.checked)} /> 출생 지역 기반 진태양시 보정</label>
+              <p className="field-help">기본은 입력한 한국 표준시를 그대로 사용합니다. 보정하면 알려진 국내 도시의 경도·균시차·과거 서머타임을 반영합니다.</p>
             </Field>
             <Field label="풀이 강도" className="wide">
               <div className="intensity-row">
@@ -157,7 +159,7 @@ function Loading({ step }: { step: number }) {
   return (
     <main className="loading-page" aria-live="polite">
       <div className="loading-orbit"><span>命</span></div>
-      <p className="eyebrow">DEMO ANALYSIS IN PROGRESS</p>
+      <p className="eyebrow">MANSERYEOK ANALYSIS IN PROGRESS</p>
       <h1>{loadingSteps[step]}</h1>
       <div className="loading-bar"><span style={{ width: `${((step + 1) / loadingSteps.length) * 100}%` }} /></div>
       <ol>{loadingSteps.map((item, index) => <li key={item} className={index <= step ? "active" : ""}><span>{index < step ? "✓" : String(index + 1).padStart(2, "0")}</span>{item}</li>)}</ol>
@@ -222,7 +224,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
     `종합 위험 등급: ${result.riskLevel}`,
     ...result.weaknesses.map((rule, i) => `${i + 1}. ${tone(rule.title, intensity)}\n${tone(rule.summary, intensity)}\n행동: ${tone(rule.actionRules[0], intensity)}`),
     `최종 경고: ${tone(result.finalWarning, intensity)}`,
-    "본 결과는 자기 성찰용 데모 콘텐츠이며 미래 사건을 확정하지 않습니다.",
+    "본 결과는 전통 명리학 기반 자기 성찰용 콘텐츠이며 미래 사건을 확정하지 않습니다.",
   ].join("\n\n"), [name, result, intensity]);
 
   const copyText = async () => {
@@ -230,7 +232,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
     notify("결과 텍스트를 복사했습니다.");
   };
   const copyLink = async () => {
-    const payload: SharePayload = { v: 1, name, intensity, seed: chart.seed, timeUnknown: chart.pillars[3].stem === "?" };
+    const payload: SharePayload = { v: 2, name, intensity, chart };
     const url = new URL(window.location.href);
     url.search = `?report=${encodeSharePayload(payload)}`;
     await navigator.clipboard.writeText(url.toString());
@@ -261,7 +263,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
     ctx.fillStyle = "#9b8f7d"; ctx.font = "22px sans-serif"; ctx.fillText("서비스 주소", 102, 1283);
     const serviceUrl = new URL(".", window.location.href).toString().split("?")[0];
     ctx.fillStyle = "#efe7d3"; ctx.font = "24px monospace"; ctx.fillText(serviceUrl, 102, 1319);
-    ctx.textAlign = "right"; ctx.fillStyle = "#756b5d"; ctx.font = "20px sans-serif"; ctx.fillText("자기 성찰용 데모 콘텐츠", 980, 1310);
+    ctx.textAlign = "right"; ctx.fillStyle = "#756b5d"; ctx.font = "20px sans-serif"; ctx.fillText("자기 성찰용 참고 콘텐츠", 980, 1310);
     const link = document.createElement("a");
     link.download = `${name}-사주-경고보고서.png`; link.href = canvas.toDataURL("image/png"); link.click();
     notify("개인 생년정보 없는 공유 이미지를 저장했습니다.");
@@ -281,8 +283,8 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
         <div>
           <p className="eyebrow"><span /> CONFIDENTIAL WARNING REPORT</p>
           <h1><em>{name}</em>님의<br />사주 경고 보고서</h1>
-          <div className="demo-badge">데모 분석 · 신뢰도 {chart.confidence}%</div>
-          <p>실제 만세력 원국이 아닌 결정론적 데모 계산입니다. 입력이 같으면 결과도 같습니다.</p>
+          <div className="demo-badge">KASI 기반 만세력 · 원국 신뢰도 {chart.confidence}%</div>
+          <p>{chart.calculationBasis}. 원국은 오픈소스 계산 결과를 그대로 사용하며 해석 문장만 규칙 기반으로 조합합니다.</p>
         </div>
         <div className={`risk-seal risk-${result.riskLevel}`} aria-label={`종합 위험 등급 ${result.riskLevel}`}>
           <span>綜合危險</span><strong>{result.riskLevel}</strong><small>{result.riskScore} / 100</small>
@@ -296,11 +298,11 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
             {chart.pillars.map((pillar) => (
               <article key={pillar.label} className="pillar">
                 <span>{pillar.label}</span><strong>{pillar.stem}</strong><strong>{pillar.branch}</strong>
-                <div><b>{pillar.element}</b><b>{pillar.yinYang}</b><b>{pillar.tenGod}</b></div><p>{pillar.role}</p>
+                <div><b>{pillar.element}/{pillar.branchElement}</b><b>{pillar.yinYang}/{pillar.branchYinYang}</b><b>{pillar.tenGod}/{pillar.branchTenGod}</b></div><p>{pillar.role}</p>
               </article>
             ))}
           </div>
-          <div className="chart-notes"><span>일간 <strong>{chart.dayMaster}</strong></span><span>신강·신약 참고 <strong>{chart.strengthScore}</strong></span><span>합·충 참고 <strong>{chart.interactions.join(" / ")}</strong></span></div>
+          <div className="chart-notes"><span>양력 환산 <strong>{chart.solarDate}</strong></span><span>음력 환산 <strong>{chart.lunarDate}</strong></span><span>일간 <strong>{chart.dayMaster}</strong></span><span>신강·신약 참고 <strong>{chart.strengthScore}</strong></span><span>합·충·형·파·해 <strong>{chart.interactions.join(" / ")}</strong></span></div>
         </ReportSection>
 
         <ReportSection number="B" title="오행 불균형" subtitle="ELEMENT IMBALANCE">
@@ -402,7 +404,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
           <div className="share-actions"><Button onClick={saveImage}>최종 경고문 이미지 저장</Button><Button variant="ghost" onClick={copyText}>결과 텍스트 복사</Button><Button variant="ghost" onClick={copyLink}>공유 링크 복사</Button></div>
         </section>
       </div>
-      <footer><strong>흉터까지 읽는 사주</strong><p>전통 명리학 요소를 활용한 자기 성찰용 데모 콘텐츠입니다. 미래 사건을 확정하지 않습니다.</p></footer>
+      <footer><strong>흉터까지 읽는 사주</strong><p>KASI 기반 만세력 원국과 전통 명리학 요소를 활용한 자기 성찰용 콘텐츠입니다. 미래 사건을 확정하지 않습니다.</p></footer>
     </main>
   );
 }
@@ -430,10 +432,9 @@ export function SajuApp() {
     const params = new URLSearchParams(window.location.search);
     const shared = decodeSharePayload(params.get("report") ?? "");
     if (shared) {
-      const chart = calculateDemoChartFromSeed(shared.seed, shared.timeUnknown);
       queueMicrotask(() => {
         setInput((current) => ({ ...current, name: shared.name, intensity: shared.intensity }));
-        setResult(analyzeChart(chart)); setScreen("result");
+        setResult(analyzeChart(shared.chart)); setScreen("result");
       });
       return;
     }
@@ -455,7 +456,7 @@ export function SajuApp() {
   const startAnalysis = (value: BirthInput) => {
     setInput(value);
     saveBirthInput(window.localStorage, value);
-    const chart = new DemoFortuneCalculator().calculate(value);
+    const chart = new KoreanManseCalculator().calculate(value);
     const analysis = analyzeChart(chart);
     setResult(analysis); setStep(0); setScreen("loading");
     let current = 0;
