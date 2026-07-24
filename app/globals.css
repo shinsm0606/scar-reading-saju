@@ -58,13 +58,6 @@ button { color: inherit; }
 .section-number { position: absolute; right: 28px; top: 48px; font: 800 90px/1 monospace; color: #1a1713; }
 .form-shell h1 { font-size: clamp(42px, 7vw, 76px); line-height: 1.08; max-width: 700px; position: relative; }
 .form-lead { max-width: 650px; color: var(--paper-dim); line-height: 1.75; position: relative; }
-.profiles { margin: 52px 0 34px; padding: 18px; background: #15130f; border: 1px solid var(--line); display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
-.profiles > div:first-child { min-width: 100px; }
-.profiles strong { display: block; font-size: 13px; }
-.profiles span { color: #6e675c; font-size: 10px; }
-.profile-list { display: flex; flex-wrap: wrap; gap: 8px; }
-.profile-list button { background: #201d18; border: 1px solid #39342c; min-height: 38px; padding: 0 13px; cursor: pointer; font-size: 12px; color: var(--paper-dim); }
-.profile-list button:hover { border-color: var(--red); color: var(--paper); }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); }
 .field { padding: 28px 26px 32px 0; border-bottom: 1px solid var(--line); min-width: 0; }
 .field:nth-child(2n) { padding-left: 26px; border-left: 1px solid var(--line); }

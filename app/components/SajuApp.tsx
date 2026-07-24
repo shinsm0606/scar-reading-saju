@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { analyzeChart, sectionRules, tone } from "../lib/analysisEngine";
 import { calculateDemoChartFromSeed, DemoFortuneCalculator } from "../lib/fortuneCalculator";
-import { defaultInput, demoProfiles } from "../lib/profiles";
+import { defaultInput } from "../lib/profiles";
 import { decodeSharePayload, encodeSharePayload } from "../lib/share";
 import { deleteBirthInput, loadBirthInput, saveBirthInput } from "../lib/storage";
 import { validateBirthInput } from "../lib/validation";
@@ -87,15 +87,6 @@ function InputForm({ initial, onSubmit, onBack }: { initial: BirthInput; onSubmi
         <p className="eyebrow"><span /> 분석 대상 기록</p>
         <h1>당신의 시간을<br />정확히 기록하십시오.</h1>
         <p className="form-lead">입력값은 데모 분석의 시드로만 사용됩니다. 저장에 동의하지 않으면 브라우저를 닫는 즉시 남지 않습니다.</p>
-
-        <div className="profiles">
-          <div><strong>테스트 프로필</strong><span>개발 확인용</span></div>
-          <div className="profile-list">
-            {demoProfiles.map((profile) => (
-              <button key={profile.label} type="button" onClick={() => setInput(profile.input)} title={profile.hint}>{profile.label}</button>
-            ))}
-          </div>
-        </div>
 
         <form onSubmit={submit} noValidate>
           <div className="form-grid">
