@@ -17,6 +17,72 @@ const elementMeta: Record<Element, { hanja: string; color: string }> = {
   수: { hanja: "水", color: "#527da0" },
 };
 
+const termCaptions: Record<string, string> = {
+  "사주 원국": "태어난 연·월·일·시를 네 기둥, 여덟 글자로 정리한 기본 명식입니다.",
+  천간: "각 기둥의 위 글자입니다. 겉으로 드러나는 작동 방식과 역할을 읽는 기준으로 씁니다.",
+  지지: "각 기둥의 아래 글자입니다. 계절·환경·생활 바탕과 글자 사이의 관계를 살핍니다.",
+  일간: "일주의 천간입니다. 다른 오행과 십신을 판단할 때 기준점이 되는 ‘나’의 글자입니다.",
+  오행: "목·화·토·금·수 다섯 작동 방식입니다. 좋고 나쁨보다 분포와 균형을 봅니다.",
+  음양: "같은 오행 안에서도 밖으로 뻗는 양과 안으로 모이는 음의 방향성을 구분합니다.",
+  십신: "일간과 다른 글자의 관계를 비견·재성·관성·인성 등 열 가지 역할로 번역한 이름입니다.",
+  "신강·신약": "일간을 돕는 힘과 소모시키는 힘의 상대적 균형입니다. 사람의 강함·약함이나 능력 점수가 아닙니다.",
+  "합·충·형·파·해": "지지끼리 결합하거나 부딪히는 관계 표기입니다. 사건 예언이 아니라 반복 자극의 참고값입니다.",
+  대운: "삶의 흐름을 약 10년 단위로 나눠 어떤 역할과 오행이 오래 자극되는지 보는 참고 주기입니다.",
+  "순행·역행": "대운의 간지를 월주에서 앞 또는 뒤 방향으로 배열하는 전통 계산 방식입니다.",
+  대운수: "첫 대운이 시작되는 대략적인 나이입니다. 관법에 따라 약간의 차이가 날 수 있습니다.",
+  세운: "입춘부터 다음 입춘까지 적용하는 한 해의 간지 흐름입니다.",
+  입춘: "명리학에서 해의 간지가 바뀌는 기준으로 사용하는 절기 시점입니다. 양력 1월 1일과 다릅니다.",
+  연주: "해당 연도의 천간과 지지를 합친 두 글자입니다. 예: 2026년 병오.",
+  자극도: "세운의 충·형·파·해와 과다 오행 중첩을 계산한 이 서비스의 참고 강도입니다.",
+  신살: "특정 지지 조합에 붙인 전통적 보조 표지입니다. 원국 전체보다 우선하지 않습니다.",
+  도화: "호감·노출·대인 반응을 살피는 보조 표지입니다. 연애 성패를 확정하지 않습니다.",
+  역마: "이동·변화·새 환경에 대한 반응을 살피는 보조 표지입니다. 사고나 이사를 예언하지 않습니다.",
+  화개: "몰입·학습·예술성과 혼자 정리하는 경향을 살피는 보조 표지입니다.",
+  천을귀인: "도움과 조언을 연결하는 방식을 살피는 보조 표지입니다. 누군가의 등장을 보장하지 않습니다.",
+};
+
+const tenGodCaptions: Record<string, string> = {
+  비견: "나와 같은 기준·자기주도·동료 의식",
+  겁재: "경쟁·공동 자원·관계 속 주도권",
+  식신: "생산·표현·생활의 안정과 결과물",
+  상관: "비판·문제 제기·자유로운 표현",
+  편재: "넓은 기회·유동적인 돈·대외 활동",
+  정재: "고정 수입·예산·현실적인 관리",
+  편관: "압박·결단·도전과 강한 책임",
+  정관: "규칙·직책·평판과 조직의 기준",
+  편인: "직감·독창적 관찰·비정형 학습",
+  정인: "학습·보호·문서와 안정적 지원",
+};
+
+function TermCaptions({ terms }: { terms: string[] }) {
+  return (
+    <aside className="term-captions" aria-label="사주 용어 쉬운 설명">
+      <strong className="term-captions-title">용어를 쉽게 읽으면</strong>
+      <div>
+        {terms.map((term) => (
+          <article key={term}>
+            <b>{term}</b>
+            <p>{termCaptions[term]}</p>
+          </article>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+function TenGodCaptions({ terms: providedTerms }: { terms: string[] }) {
+  const terms = [...new Set(
+    providedTerms
+      .filter((term) => term !== "일간" && term !== "미상"),
+  )];
+  return (
+    <aside className="ten-god-captions" aria-label="이 원국에 나온 십신 설명">
+      <strong>이 원국에 나온 십신</strong>
+      <div>{terms.map((term) => <span key={term}><b>{term}</b>{tenGodCaptions[term] ?? "일간과의 관계를 나타내는 역할 이름"}</span>)}</div>
+    </aside>
+  );
+}
+
 function Button({ children, variant = "primary", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ghost" }) {
   return <button className={`button button-${variant}`} {...props}>{children}</button>;
 }
@@ -86,7 +152,7 @@ function InputForm({ initial, onSubmit, onBack }: { initial: BirthInput; onSubmi
         <div className="section-number">01</div>
         <p className="eyebrow"><span /> 분석 대상 기록</p>
         <h1>당신의 시간을<br />정확히 기록하십시오.</h1>
-        <p className="form-lead">입력값으로 한국 표준시와 절기 절입 시각을 반영한 사주 원국을 계산합니다. 저장에 동의하지 않으면 브라우저를 닫는 즉시 남지 않습니다.</p>
+        <p className="form-lead">입력값으로 한국 표준시와 절기 절입 시각을 반영한 사주 원국(태어난 연·월·일·시의 여덟 글자)을 계산합니다. 저장에 동의하지 않으면 브라우저를 닫는 즉시 남지 않습니다.</p>
 
         <form onSubmit={submit} noValidate>
           <div className="form-grid">
@@ -132,7 +198,7 @@ function InputForm({ initial, onSubmit, onBack }: { initial: BirthInput; onSubmi
             <Field label="출생 지역" error={errors.region}>
               <input id="region" value={input.region} onChange={(e) => update("region", e.target.value)} />
               <label className="check-line"><input type="checkbox" checked={input.trueSolarTime} disabled={input.timeUnknown} onChange={(e) => update("trueSolarTime", e.target.checked)} /> 출생 지역 기반 진태양시 보정</label>
-              <p className="field-help">기본으로 국내 도시의 경도·균시차·과거 표준시와 서머타임을 반영합니다. 다른 만세력과 비교할 때는 보정 기준도 함께 확인하십시오.</p>
+              <p className="field-help">진태양시는 지역별 경도와 날짜별 태양 시각 차이를 출생시간에 보정하는 방식입니다. 국내 도시의 과거 표준시와 서머타임도 반영하므로 다른 만세력과 비교할 때 보정 기준을 함께 확인하십시오.</p>
             </Field>
             <Field label="풀이 강도" className="wide">
               <div className="intensity-row">
@@ -483,18 +549,23 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
 
       <div className="report-body">
         <ReportSection number="A" title="사주 원국" subtitle="KOREAN FOUR PILLARS · 시일월년">
+          <TermCaptions terms={["사주 원국", "천간", "지지", "일간", "십신", "신강·신약", "합·충·형·파·해"]} />
           <div className="pillars">
             {[...chart.pillars].reverse().map((pillar) => (
               <article key={pillar.label} className="pillar">
-                <span>{pillar.label}</span><strong>{pillar.stem}</strong><strong>{pillar.branch}</strong>
+                <span>{pillar.label}</span>
+                <small>천간 · 위 글자</small><strong>{pillar.stem}</strong>
+                <small>지지 · 아래 글자</small><strong>{pillar.branch}</strong>
                 <div><b>{pillar.element}/{pillar.branchElement}</b><b>{pillar.yinYang}/{pillar.branchYinYang}</b><b>{pillar.tenGod}/{pillar.branchTenGod}</b></div><p>{pillar.role}</p>
               </article>
             ))}
           </div>
           <div className="chart-notes"><span>양력 환산 <strong>{chart.solarDate}</strong></span><span>음력 환산 <strong>{chart.lunarDate}</strong></span><span>일간 <strong>{chart.dayMaster}</strong></span><span>신강·신약 참고 <strong>{chart.strengthScore}</strong></span><span>합·충·형·파·해 <strong>{chart.interactions.join(" / ")}</strong></span></div>
+          <TenGodCaptions terms={chart.pillars.flatMap(({ tenGod, branchTenGod }) => [tenGod, branchTenGod])} />
         </ReportSection>
 
         <ReportSection number="B" title="오행 불균형" subtitle="ELEMENT IMBALANCE">
+          <TermCaptions terms={["오행", "음양"]} />
           <div className="elements">
             <div className="element-bars">
               {elementEntries.map(([element, value]) => (
@@ -515,10 +586,14 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
         </ReportSection>
 
         <ReportSection number="D" title="대운의 흐름" subtitle="10-YEAR LUCK CYCLES">
+          <TermCaptions terms={["대운", "순행·역행", "대운수", "십신"]} />
+          <TenGodCaptions terms={(chart.luckFlow?.options ?? []).flatMap(({ cycles }) => cycles.flatMap(({ tenGod, branchTenGod }) => [tenGod, branchTenGod]))} />
           <LuckFlowReport chart={chart} intensity={intensity} />
         </ReportSection>
 
         <ReportSection number="E" title="연도별 세운 경고" subtitle="ANNUAL FLOW">
+          <TermCaptions terms={["세운", "입춘", "연주", "자극도"]} />
+          <TenGodCaptions terms={result.annualFlows.flatMap(({ tenGod, branchTenGod }) => [tenGod, branchTenGod])} />
           <AnnualFlowReport result={result} intensity={intensity} />
         </ReportSection>
 
@@ -527,6 +602,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
         </ReportSection>
 
         <ReportSection number="G" title="재미로 보는 보조 신살" subtitle="SYMBOLIC STARS">
+          <TermCaptions terms={["신살", "도화", "역마", "화개", "천을귀인"]} />
           <SpiritStarReport chart={chart} intensity={intensity} />
         </ReportSection>
 
