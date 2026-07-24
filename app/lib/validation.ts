@@ -29,6 +29,5 @@ export function validateBirthInput(input: BirthInput, now = new Date()): Record<
   }
   if (input.minute < 0 || input.minute > 59) errors.time = "출생 분을 올바르게 입력하십시오.";
   if (!input.region.trim()) errors.region = "출생 지역을 입력하십시오.";
-  if (input.concern.length > 600) errors.concern = "고민 내용은 600자 이내로 입력하십시오.";
   return errors;
 }

@@ -3,18 +3,20 @@ import { balanceInterpretations } from "../data/balanceInterpretations";
 import { careerWarnings } from "../data/careerWarnings";
 import { dayMasterInterpretations } from "../data/dayMasterInterpretations";
 import { elementInterpretations } from "../data/elementInterpretations";
+import { interactionInterpretations } from "../data/interactionInterpretations";
 import { lifestyleWarnings } from "../data/lifestyleWarnings";
 import { moneyWarnings } from "../data/moneyWarnings";
 import { relationshipWarnings } from "../data/relationshipWarnings";
 import { tenGodInterpretations } from "../data/tenGodInterpretations";
-import type { AnalysisResult, ConcernCategory, Element, FortuneChart, Intensity, RiskLevel, WarningRule } from "../types/fortune";
+import type { AnalysisResult, Element, FortuneChart, Intensity, RiskLevel, WarningRule } from "../types/fortune";
 import { calculateAnnualFlows } from "./flowCalculator";
 
 const weaknessRules = [
-  ...elementInterpretations,
   ...dayMasterInterpretations,
+  ...elementInterpretations,
   ...tenGodInterpretations,
   ...balanceInterpretations,
+  ...interactionInterpretations,
 ];
 
 function stableHash(value: string): number {
@@ -26,32 +28,38 @@ function stableHash(value: string): number {
   return hash >>> 0;
 }
 
+function matchingInteractions(chart: FortuneChart, value: string): string[] {
+  return chart.interactions.filter((item) => item.endsWith(` ${value}`));
+}
+
 function conditionScore(condition: string, chart: FortuneChart): number | null {
   const [type, value] = condition.split(":");
   if (type === "excess") {
     const element = value as Element;
     return chart.excessiveElements.includes(element)
-      ? 34 + chart.elementDistribution[element] * 7
+      ? 46 + chart.elementDistribution[element] * 9
       : null;
   }
   if (type === "deficient") {
     const element = value as Element;
     return chart.deficientElements.includes(element)
-      ? 34 + Math.max(0, 2 - chart.elementDistribution[element]) * 9
+      ? 43 + Math.max(0, 2 - chart.elementDistribution[element]) * 10
       : null;
   }
   if (type === "tenGod") {
     const count = chart.tenGodDistribution[value] ?? 0;
-    return count > 0 ? 12 + count * 14 : null;
+    return count > 0 ? 22 + count * 15 : null;
   }
-  if (type === "dayMaster") {
-    return chart.dayMaster === value ? 42 : null;
-  }
+  if (type === "dayMaster") return chart.dayMaster === value ? 64 : null;
   if (type === "strength" && value === "strong") {
-    return chart.strengthScore >= 62 ? 25 + (chart.strengthScore - 62) * 1.4 : null;
+    return chart.strengthScore >= 62 ? 38 + (chart.strengthScore - 62) * 1.5 : null;
   }
   if (type === "strength" && value === "weak") {
-    return chart.strengthScore <= 38 ? 25 + (38 - chart.strengthScore) * 1.4 : null;
+    return chart.strengthScore <= 38 ? 38 + (38 - chart.strengthScore) * 1.5 : null;
+  }
+  if (type === "interaction") {
+    const count = matchingInteractions(chart, value).length;
+    return count > 0 ? 39 + count * 12 : null;
   }
   if (type === "fallback") return 1;
   return null;
@@ -60,10 +68,11 @@ function conditionScore(condition: string, chart: FortuneChart): number | null {
 function ruleScore(rule: WarningRule, chart: FortuneChart): number | null {
   const signals = rule.conditions
     .map((condition) => conditionScore(condition, chart))
-    .filter((score): score is number => score !== null);
+    .filter((score): score is number => score !== null)
+    .sort((a, b) => b - a);
   if (signals.length === 0) return null;
-  const strongestSignal = Math.max(...signals);
-  const repeatedSignals = signals.slice(1).reduce((sum, score) => sum + Math.min(score, 18) * 0.25, 0);
+  const strongestSignal = signals[0];
+  const repeatedSignals = signals.slice(1).reduce((sum, score) => sum + Math.min(score, 24) * 0.3, 0);
   const deterministicTieBreak = stableHash(`${chart.seed}:${rule.id}`) % 1000 / 1000;
   return strongestSignal + repeatedSignals + rule.severity * 3 + deterministicTieBreak;
 }
@@ -76,241 +85,55 @@ function rankMatchingRules(rules: WarningRule[], chart: FortuneChart): WarningRu
     .map(({ rule }) => rule);
 }
 
-const concernKeywords: Record<Exclude<ConcernCategory, "general">, Array<{ words: string[]; ruleId: string }>> = {
-  relationship: [
-    { words: ["답장", "연락", "의심", "속마음", "썸", "외도"], ruleId: "relationship-mind-reading" },
-    { words: ["서운", "희생", "배신", "가족", "부모", "친구"], ruleId: "relationship-scorekeeping" },
-    { words: ["싸움", "갈등", "말투", "이별", "연애", "결혼"], ruleId: "relationship-winning" },
-  ],
-  career: [
-    { words: ["퇴사", "이직", "상사", "인정", "승진"], ruleId: "career-recognition-collapse" },
-    { words: ["준비", "완벽", "시험", "취업", "실행"], ruleId: "career-preparation-loop" },
-    { words: ["조직", "회사", "규칙", "보고", "직장"], ruleId: "career-rigid-order" },
-  ],
-  money: [
-    { words: ["투자", "대출", "보증", "공동", "지인", "코인", "주식"], ruleId: "money-emotional" },
-    { words: ["저축", "절약", "집", "부동산", "예산", "아파트", "인테리어", "리모델링", "확장", "공사", "견적", "비용"], ruleId: "money-fear-freeze" },
-    { words: ["소비", "쇼핑", "카드", "지출", "빚", "가격", "금액"], ruleId: "money-anxiety-spending" },
-  ],
-  lifestyle: [
-    { words: ["과로", "야근", "분노", "압박", "번아웃"], ruleId: "lifestyle-overdrive" },
-    { words: ["수면", "잠", "불안", "걱정", "생각"], ruleId: "lifestyle-rumination" },
-    { words: ["운동", "식사", "무기력", "생활", "휴식"], ruleId: "lifestyle-stagnation" },
-  ],
-};
-
-type ConcernScenario = {
-  id: "home-project" | "career-change" | "investment" | "relationship-repair" | "relationship-decision" | "recovery" | "general-decision";
-  category: Exclude<ConcernCategory, "general">;
-  label: string;
-  words: string[];
-  preferredRuleId: string;
-};
-
-const concernScenarios: ConcernScenario[] = [
-  {
-    id: "home-project",
-    category: "money",
-    label: "주거·인테리어 결정",
-    words: ["인테리어", "리모델링", "아파트", "주택", "확장 공사", "베란다", "샷시", "구축", "견적"],
-    preferredRuleId: "money-fear-freeze",
-  },
-  {
-    id: "career-change",
-    category: "career",
-    label: "퇴사·이직 결정",
-    words: ["퇴사", "이직", "직장", "상사", "취업", "승진"],
-    preferredRuleId: "career-recognition-collapse",
-  },
-  {
-    id: "investment",
-    category: "money",
-    label: "투자·대출 결정",
-    words: ["투자", "주식", "코인", "대출", "보증", "공동투자"],
-    preferredRuleId: "money-emotional",
-  },
-  {
-    id: "relationship-repair",
-    category: "relationship",
-    label: "관계 회복·재접촉",
-    words: ["화가 났", "화났", "이유를 모르", "다시 물어", "대화를 다시", "며칠", "사과할", "풀고 싶"],
-    preferredRuleId: "relationship-mind-reading",
-  },
-  {
-    id: "relationship-decision",
-    category: "relationship",
-    label: "관계 유지·정리 결정",
-    words: ["이별", "헤어", "결혼", "연애", "연락", "손절", "친구"],
-    preferredRuleId: "relationship-winning",
-  },
-  {
-    id: "recovery",
-    category: "lifestyle",
-    label: "과로·생활 회복",
-    words: ["번아웃", "과로", "수면", "잠", "불안", "무기력", "휴식"],
-    preferredRuleId: "lifestyle-rumination",
-  },
-  {
-    id: "general-decision",
-    category: "lifestyle",
-    label: "중요한 선택",
-    words: ["할까", "말까", "고민", "선택", "결정"],
-    preferredRuleId: "lifestyle-overdrive",
-  },
-];
-
-function detectConcernScenario(normalized: string): ConcernScenario | undefined {
-  const ranked = concernScenarios
-    .map((scenario) => ({
-      scenario,
-      matches: scenario.words.filter((word) => normalized.includes(word)).length,
-    }))
-    .filter(({ matches }) => matches > 0)
-    .sort((a, b) => b.matches - a.matches);
-  const specific = ranked.find(({ scenario }) => scenario.id !== "general-decision");
-  return (specific ?? ranked[0])?.scenario;
+function signalFamily(rule: WarningRule): string {
+  const type = rule.conditions[0]?.split(":")[0] ?? rule.id;
+  return type === "excess" || type === "deficient" ? "element" : type;
 }
 
-function buildScenarioGuidance(
-  scenario: ConcernScenario,
-  chart: FortuneChart,
-  linkedWeakness: WarningRule,
-  concern: string,
-): Pick<NonNullable<AnalysisResult["focusAnalysis"]>, "scenarioLabel" | "understoodContext" | "directAnswer" | "decisionChecklist"> {
-  const elementEntries = Object.entries(chart.elementDistribution) as [Element, number][];
-  const strongestElement = [...elementEntries].sort((a, b) => b[1] - a[1])[0][0];
-  const weakestElement = [...elementEntries].sort((a, b) => a[1] - b[1])[0][0];
-  const amount = concern.match(/[\d,.]+\s*(?:천|만|억)?\s*원/)?.[0]?.replace(/\s+/g, "");
-  const commonPrefix = `원국에서는 “${linkedWeakness.title}” 반응이 먼저 올라올 수 있습니다. 강한 ${strongestElement}의 방식으로 밀어붙이기 전에 부족한 ${weakestElement}의 검증 절차를 붙여야 합니다.`;
-
-  if (scenario.id === "home-project") {
-    return {
-      scenarioLabel: scenario.label,
-      understoodContext: `노후 주거 공간의 공사 범위를 두고, 확장 여부와 ${amount ? `${amount} 이상의 ` : ""}비용 차이 사이에서 선택하는 문제로 읽었습니다.`,
-      directAnswer: `사주만으로 확장 공사를 권하거나 말릴 수는 없습니다. 지금은 “감당할 수 있나”보다 비용 차이가 실제 공간 효용과 안전·단열·결로·추가 공사 위험을 충분히 줄이는지부터 확인해야 합니다. ${commonPrefix}`,
-      decisionChecklist: [
-        "확장 없이 가구 배치나 수납 변경으로 같은 목적을 달성할 수 있는지 비교한다.",
-        "구조·단열·결로·창호·냉난방 영향과 필요한 승인 절차를 관리 주체와 전문가에게 확인한다.",
-        "업체마다 동일한 공사 범위표를 주고 자재·철거·폐기·추가 공사 조건이 분리된 견적을 받는다.",
-        "공사비 외 임시 거주, 보관, 일정 지연과 예상 밖 보수 비용을 위한 별도 예비비를 둔다.",
-        "실제 거주 예정 기간과 확장 공간의 주당 사용 시간을 적은 뒤 비용 차이와 비교한다.",
-      ],
-    };
+function selectDiverseWeaknesses(chart: FortuneChart): WarningRule[] {
+  const ranked = rankMatchingRules(weaknessRules, chart);
+  const selected: WarningRule[] = [];
+  const usedFamilies = new Set<string>();
+  const dayMasterRule = ranked.find((rule) => rule.conditions.includes(`dayMaster:${chart.dayMaster}`));
+  if (dayMasterRule) {
+    selected.push(dayMasterRule);
+    usedFamilies.add("dayMaster");
   }
-  if (scenario.id === "career-change") {
-    return {
-      scenarioLabel: scenario.label,
-      understoodContext: "현재 조직의 불편함과 다음 선택의 조건 사이에서 퇴사 또는 이직 시점을 결정하는 문제로 읽었습니다.",
-      directAnswer: `감정이 가장 높은 날에는 퇴사 여부를 확정하지 마십시오. ${commonPrefix} 다음 직장의 조건과 생활비 확보 여부가 문서로 확인된 뒤 결정해야 합니다.`,
-      decisionChecklist: ["퇴사 이유를 사람·업무·보상·성장으로 분리한다.", "다음 선택의 최소 조건 세 가지를 적는다.", "생활비와 공백 기간을 숫자로 확인한다.", "72시간 뒤 같은 결론인지 다시 검토한다."],
-    };
+  for (const rule of ranked) {
+    if (selected.includes(rule)) continue;
+    const family = signalFamily(rule);
+    if (usedFamilies.has(family)) continue;
+    selected.push(rule);
+    usedFamilies.add(family);
+    if (selected.length === 3) break;
   }
-  if (scenario.id === "investment") {
-    return {
-      scenarioLabel: scenario.label,
-      understoodContext: "수익 가능성과 손실 위험 사이에서 투자·대출 규모 또는 참여 여부를 결정하는 문제로 읽었습니다.",
-      directAnswer: `사주는 투자 수익을 보장하지 않습니다. ${commonPrefix} 손실 한도·회수 조건·최악의 경우를 별도 전문 자료로 검증하기 전에는 큰 금액을 결정하지 마십시오.`,
-      decisionChecklist: ["손실 가능한 최대 금액을 먼저 정한다.", "수익 설명과 반대되는 자료를 확인한다.", "대출·보증·명의 대여를 분리해 검토한다.", "지인 제안도 계약과 종료 조건을 문서로 남긴다."],
-    };
+  for (const rule of [...ranked, ...actionRules]) {
+    if (selected.some((item) => item.id === rule.id)) continue;
+    selected.push(rule);
+    if (selected.length === 3) break;
   }
-  if (scenario.id === "relationship-repair") {
-    const elapsedDays = concern.match(/(\d+)\s*일/)?.[1];
-    return {
-      scenarioLabel: scenario.label,
-      understoodContext: `친구가 화난 이유를 모르는 상태에서${elapsedDays ? ` ${elapsedDays}일이 지난 지금` : ""}, 먼저 다시 대화를 요청해도 되는지 묻는 문제로 읽었습니다.`,
-      directAnswer: `네. 이유를 모른 채 시간이 지났다면 지금 한 번 차분히 물어보는 편이 낫습니다. 다만 추궁하거나 답을 재촉하지 마십시오. “며칠 전 네가 화가 난 것 같아서 마음에 걸려. 내가 불편하게 한 게 있다면 알고 싶어. 지금 말하기 어렵다면 편할 때 알려줘.” 정도로 한 번만 보내십시오. ${commonPrefix}`,
-      decisionChecklist: [
-        "관찰한 사실만 말하고 상대의 의도를 단정하지 않는다.",
-        "무엇이 불편했는지 알고 싶다는 질문을 한 번만 보낸다.",
-        "즉시 답장이나 화해를 요구하지 않고 상대가 답할 시간을 둔다.",
-        "구체적인 이유를 들으면 해명보다 먼저 상대가 불편했던 지점을 확인한다.",
-        "이유 설명 없이 분노와 침묵이 반복된다면 관계의 대화 규칙과 경계를 다시 합의한다.",
-      ],
-    };
-  }
-  if (scenario.id === "relationship-decision") {
-    return {
-      scenarioLabel: scenario.label,
-      understoodContext: "관계에서 반복되는 갈등과 유지·거리 두기·정리 사이의 선택 문제로 읽었습니다.",
-      directAnswer: `확인되지 않은 의도 추측만으로 관계를 끝내거나 붙잡지 마십시오. ${commonPrefix} 반복된 사실과 한 번의 감정 반응을 구분한 뒤 경계를 말로 확인해야 합니다.`,
-      decisionChecklist: ["관찰한 사실과 내 해석을 분리한다.", "상대에게 원하는 변화와 기한을 한 번 명확히 말한다.", "사과보다 행동 변화가 반복되는지 본다.", "위협이나 안전 문제가 있다면 사주와 무관하게 전문 도움을 우선한다."],
-    };
-  }
-  if (scenario.id === "recovery") {
-    return {
-      scenarioLabel: scenario.label,
-      understoodContext: "버티는 생활을 계속할지, 속도를 낮추고 회복 구조를 만들지 묻는 문제로 읽었습니다.",
-      directAnswer: `회복은 의지로 버티는 일이 아닙니다. ${commonPrefix} 수면·식사·업무 종료 시간 중 하나부터 고정하고, 지속적인 이상 증상은 의료 전문가에게 확인하십시오.`,
-      decisionChecklist: ["일주일간 수면과 업무 종료 시간을 기록한다.", "회복을 방해하는 일정 하나를 줄인다.", "피로한 날 중요한 결정을 미룬다.", "지속되는 통증이나 이상 증상은 의료 전문가와 상담한다."],
-    };
-  }
-  return {
-    scenarioLabel: scenario.label,
-    understoodContext: "두 선택지의 장단점보다 지금의 감정과 판단 습관이 결론을 왜곡하는지 확인하려는 문제로 읽었습니다.",
-    directAnswer: `사주가 대신 결정을 내려주지는 않습니다. ${commonPrefix} 되돌릴 수 있는 선택은 작게 시험하고, 되돌리기 어려운 선택은 비용·기한·중단 조건을 확인한 뒤 결정하십시오.`,
-    decisionChecklist: ["원하는 결과와 피하려는 결과를 각각 적는다.", "되돌릴 수 있는 선택인지 구분한다.", "결정 기한과 중단 조건을 정한다.", "이해관계가 없는 사람에게 빠진 조건을 검토받는다."],
-  };
+  return deduplicateWarnings(selected).slice(0, 3);
 }
 
-const categoryRules: Record<Exclude<ConcernCategory, "general">, WarningRule[]> = {
-  relationship: relationshipWarnings,
-  career: careerWarnings,
-  money: moneyWarnings,
-  lifestyle: lifestyleWarnings,
-};
+function conditionEvidence(condition: string, chart: FortuneChart): string | null {
+  const [type, value] = condition.split(":");
+  if (conditionScore(condition, chart) === null) return null;
+  if (type === "dayMaster") return `판단의 중심인 일간이 ${value}입니다`;
+  if (type === "excess") return `${value}가 ${chart.elementDistribution[value as Element]}개로 원국에서 가장 강합니다`;
+  if (type === "deficient") return `${value}가 ${chart.elementDistribution[value as Element]}개로 원국에서 가장 약합니다`;
+  if (type === "tenGod") return `${value}이 원국에 ${chart.tenGodDistribution[value]}회 드러납니다`;
+  if (type === "strength") return `신강·신약 참고 지표가 ${chart.strengthScore}로 ${value === "strong" ? "자기 지지력이 강한 편" : "외부 자극의 영향을 받기 쉬운 편"}입니다`;
+  if (type === "interaction") return `지지에서 ${matchingInteractions(chart, value).join(" · ")} 관계가 확인됩니다`;
+  return null;
+}
 
-function buildFocusAnalysis(
-  chart: FortuneChart,
-  weaknesses: WarningRule[],
-  requestedCategory: ConcernCategory,
-  concern: string,
-): AnalysisResult["focusAnalysis"] {
-  const normalized = concern.trim().toLowerCase();
-  if (!normalized) return undefined;
-  const scenario = detectConcernScenario(normalized);
-
-  const keywordMatches = Object.entries(concernKeywords).flatMap(([category, routes]) =>
-    routes.flatMap(({ words, ruleId }) =>
-      words
-        .filter((word) => normalized.includes(word))
-        .map((word) => ({ category: category as Exclude<ConcernCategory, "general">, word, ruleId })),
-    ),
-  );
-  const inferredCategory = keywordMatches.reduce<Record<string, number>>((counts, match) => {
-    counts[match.category] = (counts[match.category] ?? 0) + 1;
-    return counts;
-  }, {});
-  const category = requestedCategory === "general"
-    ? scenario?.category
-      ?? (Object.entries(inferredCategory).sort((a, b) => b[1] - a[1])[0]?.[0] as Exclude<ConcernCategory, "general"> | undefined)
-      ?? "lifestyle"
-    : requestedCategory;
-  const routes = keywordMatches.filter((match) => match.category === category);
-  const rules = categoryRules[category];
-  const ranked = rules
-    .map((rule) => ({
-      rule,
-      score: (ruleScore(rule, chart) ?? 0)
-        + routes.filter((route) => route.ruleId === rule.id).length * 60
-        + (scenario?.preferredRuleId === rule.id ? 200 : 0)
-        + stableHash(`${chart.seed}:${normalized}:${rule.id}`) % 1000 / 1000,
-    }))
-    .sort((a, b) => b.score - a.score);
-  const rule = ranked[0].rule;
-  const linkedWeakness = [...weaknesses].sort((a, b) => {
-    const overlap = (candidate: WarningRule) => candidate.tags.filter((tag) => rule.tags.includes(tag)).length;
-    return overlap(b) - overlap(a);
-  })[0];
-  const scenarioGuidance = scenario
-    ? buildScenarioGuidance(scenario, chart, linkedWeakness, concern)
-    : {};
-  return {
-    category,
-    matchedKeywords: [...new Set(routes.map((route) => route.word))].slice(0, 5),
-    rule,
-    linkedWeakness,
-    ...scenarioGuidance,
-  };
+export function describeRuleMatch(rule: WarningRule, chart: FortuneChart): string {
+  const evidence = rule.conditions
+    .map((condition) => conditionEvidence(condition, chart))
+    .filter((item): item is string => Boolean(item));
+  return evidence.length > 0
+    ? `원국 판독: ${evidence.join("이며, ")}. 이 신호가 약점으로 과장되는 상황을 우선 경고합니다.`
+    : "이 항목은 뚜렷한 원국 근거가 없어 핵심 경고로 사용하지 않습니다.";
 }
 
 export function deduplicateWarnings(rules: WarningRule[]): WarningRule[] {
@@ -332,36 +155,23 @@ export function calculateRisk(score: number): RiskLevel {
   return "고위험";
 }
 
-function selectFinalWarning(weaknesses: WarningRule[], seed: number): string {
-  const tags = new Set(weaknesses.flatMap((rule) => rule.tags));
-  if (tags.has("화") || tags.has("상관")) {
-    return "당신의 가장 큰 적은 능력 부족이 아니라, 감정이 확신으로 변하는 순간입니다.";
-  }
-  if (tags.has("수") || tags.has("편인")) {
-    return "확인하지 않은 생각을 사실로 받아들이는 순간, 통찰은 가장 위험한 착각이 됩니다.";
-  }
-  if (tags.has("금") || tags.has("정관")) {
-    return "정답을 지키는 데 집착하면, 사람과 기회를 함께 잘라낼 수 있습니다.";
-  }
-  if (tags.has("토") || tags.has("정재")) {
-    return "참는 것이 강함이라고 믿는 순간, 빠져나올 기회를 놓치게 됩니다.";
-  }
-  if (tags.has("목") || tags.has("편재")) {
-    return "시작의 속도보다 끝까지 책임지는 힘이 당신의 운을 결정합니다.";
-  }
-  const finals = [
-    "당신을 무너뜨리는 것은 운이 아니라, 상처받은 순간 모든 것을 단정하는 습관입니다.",
-    "불안이 사실처럼 느껴지는 순간일수록, 결론보다 확인이 먼저입니다.",
-    "지금의 자존심을 지키려다 내일의 선택권을 버리지 마십시오.",
+function selectFinalWarning(weaknesses: WarningRule[], chart: FortuneChart): string {
+  const primary = weaknesses[0];
+  const interaction = chart.interactions.find((item) => item !== "뚜렷한 합·충·형·파·해 없음");
+  const endings = [
+    `${primary.actionRules[0]}. 이것을 미루는 순간 강점은 같은 문제를 반복하는 핑계가 됩니다.`,
+    `${primary.summary} ${primary.actionRules[0]}.`,
+    `${interaction ? `${interaction}의 긴장이 올라올수록` : "압박이 높아질수록"} ${primary.warningSigns[0]} 반응을 사실로 착각하지 마십시오.`,
   ];
-  return finals[seed % finals.length];
+  return endings[chart.seed % endings.length];
 }
 
 function buildOverallAssessment(result: Omit<AnalysisResult, "overallAssessment">): AnalysisResult["overallAssessment"] {
-  const { chart, weaknesses, riskLevel, annualFlows, focusAnalysis } = result;
+  const { chart, weaknesses, riskLevel, annualFlows } = result;
   const elementEntries = Object.entries(chart.elementDistribution) as [Element, number][];
-  const strongestElement = [...elementEntries].sort((a, b) => b[1] - a[1])[0][0];
-  const weakestElement = [...elementEntries].sort((a, b) => a[1] - b[1])[0][0];
+  const sortedElements = [...elementEntries].sort((a, b) => b[1] - a[1]);
+  const strongestElement = sortedElements[0][0];
+  const weakestElement = sortedElements.at(-1)?.[0] ?? "수";
   const dominantTenGod = Object.entries(chart.tenGodDistribution).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "비견";
   const currentAnnual = annualFlows[2];
   const verdicts: Record<RiskLevel, string> = {
@@ -386,68 +196,93 @@ function buildOverallAssessment(result: Omit<AnalysisResult, "overallAssessment"
     수: "정보 확인과 감정의 냉각 시간",
   };
   const primary = weaknesses[0];
-  const focusConclusion = focusAnalysis
-    ? focusAnalysis.directAnswer
-      ?? `입력한 고민에서는 “${focusAnalysis.rule.title}” 문제가 원국의 핵심 약점과 겹칩니다. ${focusAnalysis.rule.actionRules[0]}`
-    : undefined;
-
+  const secondary = weaknesses[1];
   return {
     verdict: verdicts[riskLevel],
     headline: primary.title,
-    summary: `${chart.dayMaster} 일간을 중심으로 ${strongestElement} 기운과 ${dominantTenGod} 성향이 두드러집니다. 힘이 없어서 무너지는 구조가 아니라, 강점이 과속할 때 부족한 ${weakestElement}의 제동 방식이 따라오지 못하는 구조입니다.`,
-    coreRisk: `${primary.summary} ${primary.consequences}`,
-    protectiveFactor: `보호 요인은 ${strongestElement}의 ${strengths[strongestElement]}입니다. 다만 ${weakestElement}의 ${compensations[weakestElement]}을 붙여야 이 힘이 독주가 아닌 성과로 남습니다.`,
-    currentFlow: `${currentAnnual.year}년 ${currentAnnual.korean} 세운은 ${currentAnnual.theme}입니다. 현재 자극도는 ${currentAnnual.pressure}이며, ${currentAnnual.warning}`,
-    firstPriority: focusAnalysis?.decisionChecklist?.[0] ?? focusAnalysis?.rule.actionRules[0] ?? primary.actionRules[0],
-    ...(focusConclusion ? { focusConclusion } : {}),
+    summary: `${chart.dayMaster} 일간, ${strongestElement} ${chart.elementDistribution[strongestElement]}개와 ${dominantTenGod} ${chart.tenGodDistribution[dominantTenGod] ?? 0}회가 핵심 축입니다. ${weakestElement} ${chart.elementDistribution[weakestElement]}개의 보완 방식이 늦을 때 “${primary.title}” 패턴이 먼저 드러납니다.`,
+    coreRisk: `${primary.summary} 이어서 ${secondary.summary}`,
+    protectiveFactor: `${strongestElement}의 ${strengths[strongestElement]}이 보호 장치입니다. ${weakestElement}의 ${compensations[weakestElement]}을 붙이면 같은 힘이 독주보다 성과로 남습니다.`,
+    currentFlow: `${currentAnnual.year}년 ${currentAnnual.korean} 세운은 ${currentAnnual.theme}입니다. 자극도는 ${currentAnnual.pressure}이며, ${currentAnnual.warning}`,
+    firstPriority: primary.actionRules[0],
+    conclusion: `${chart.dayMaster} 일간의 기본 반응과 ${strongestElement}의 과속 지점, ${dominantTenGod}의 반복 역할이 함께 겹칩니다. 가장 중요한 것은 ${primary.actionRules[0]}는 것입니다. 이 한 가지를 지키면 ${secondary.title} 패턴까지 동시에 낮출 수 있습니다.`,
   };
 }
 
-export function analyzeChart(
-  chart: FortuneChart,
-  focus?: { category: ConcernCategory; concern: string },
-  referenceYear = new Date().getFullYear(),
-): AnalysisResult {
-  const ranked = rankMatchingRules(weaknessRules, chart);
-  const fallbacks = rankMatchingRules(actionRules, chart);
-  const weaknesses = deduplicateWarnings([...ranked, ...fallbacks]).slice(0, 3);
+export function analyzeChart(chart: FortuneChart, referenceYear = new Date().getFullYear()): AnalysisResult {
+  const weaknesses = selectDiverseWeaknesses(chart);
   const values = Object.values(chart.elementDistribution);
   const imbalance = Math.max(...values) - Math.min(...values);
   const strengthDeviation = Math.abs(chart.strengthScore - 50);
+  const interactionPressure = chart.interactions.filter((item) => / 충$| 형$| 파$| 해$/.test(item)).length;
   const signalSeverity = weaknesses.reduce((sum, item) => sum + item.severity, 0);
   const riskScore = Math.min(
     92,
-    Math.max(18, 19 + imbalance * 6.5 + strengthDeviation * 0.45 + signalSeverity * 1.8 + (chart.confidence < 70 ? 3 : 0)),
+    Math.max(18, 18 + imbalance * 6.5 + strengthDeviation * 0.45 + signalSeverity * 1.7 + interactionPressure * 2.5 + (chart.confidence < 90 ? 3 : 0)),
   );
   const annualFlows = calculateAnnualFlows(chart, referenceYear);
+  const weaknessEvidence = Object.fromEntries(weaknesses.map((rule) => [rule.id, describeRuleMatch(rule, chart)]));
   const partialResult: Omit<AnalysisResult, "overallAssessment"> = {
     chart,
     riskLevel: calculateRisk(riskScore),
     riskScore,
     weaknesses,
-    finalWarning: selectFinalWarning(weaknesses, chart.seed),
+    weaknessEvidence,
+    finalWarning: selectFinalWarning(weaknesses, chart),
     annualFlows,
   };
-  if (focus) {
-    partialResult.focusAnalysis = buildFocusAnalysis(chart, weaknesses, focus.category, focus.concern);
-  }
-  return {
-    ...partialResult,
-    overallAssessment: buildOverallAssessment(partialResult),
-  };
+  return { ...partialResult, overallAssessment: buildOverallAssessment(partialResult) };
 }
 
-export function selectSectionRules(chart: FortuneChart) {
-  const choose = (rules: WarningRule[]): WarningRule =>
-    rankMatchingRules(rules, chart)[0]
-    ?? rules[stableHash(`${chart.seed}:${rules.map((rule) => rule.id).join(":")}`) % rules.length];
-
+export function selectSectionRules(chart: FortuneChart): {
+  relationship: WarningRule | null;
+  career: WarningRule | null;
+  money: WarningRule | null;
+  lifestyle: WarningRule | null;
+} {
+  const choose = (rules: WarningRule[]): WarningRule | null => rankMatchingRules(rules, chart)[0] ?? null;
   return {
     relationship: choose(relationshipWarnings),
     career: choose(careerWarnings),
     money: choose(moneyWarnings),
     lifestyle: choose(lifestyleWarnings),
   };
+}
+
+export function buildPersonalizedActions(
+  chart: FortuneChart,
+  weaknesses: WarningRule[],
+  sectionRules: ReturnType<typeof selectSectionRules>,
+): { prohibited: string[]; rescue: string[] } {
+  const matchedSections = Object.values(sectionRules).filter((rule): rule is WarningRule => rule !== null);
+  const sourceRules = deduplicateWarnings([...weaknesses, ...matchedSections]);
+  const prohibited = sourceRules
+    .map((rule) => `“${rule.warningSigns[0]}” 신호가 보일 때 중요한 결정을 밀어붙이지 마십시오.`)
+    .filter((item, index, items) => items.indexOf(item) === index)
+    .slice(0, 5);
+  const rescue = sourceRules
+    .flatMap((rule) => rule.actionRules)
+    .filter((item, index, items) => items.indexOf(item) === index)
+    .slice(0, 5);
+  const missingElement = (Object.entries(chart.elementDistribution) as [Element, number][])
+    .sort((a, b) => a[1] - b[1])[0][0];
+  const elementFallbacks: Record<Element, string> = {
+    목: "미루는 일은 오늘 끝낼 15분짜리 첫 행동으로 바꾼다.",
+    화: "고마움과 반대 의견은 쌓아 두지 말고 그날 짧게 표현한다.",
+    토: "수면·식사·운동 중 하나를 같은 시간에 반복한다.",
+    금: "부탁을 받으면 역할·범위·마감을 확인한 뒤 답한다.",
+    수: "결론 전에 사실과 해석을 두 칸으로 나눠 기록한다.",
+  };
+  if (rescue.length < 5) rescue.push(elementFallbacks[missingElement]);
+  while (prohibited.length < 5) {
+    const fallback = [
+      "원국 근거가 약한 일반적인 경고를 자신의 핵심 약점처럼 받아들이지 마십시오.",
+      "한 번의 감정 반응을 운명이나 성격 전체로 단정하지 마십시오.",
+    ][prohibited.length % 2];
+    if (!prohibited.includes(fallback)) prohibited.push(fallback);
+    else break;
+  }
+  return { prohibited: prohibited.slice(0, 5), rescue: rescue.slice(0, 5) };
 }
 
 export function tone(text: string, intensity: Intensity): string {

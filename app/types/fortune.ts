@@ -1,7 +1,6 @@
 export type Gender = "male" | "female" | "none";
 export type CalendarType = "solar" | "lunar";
 export type Intensity = "mild" | "realistic" | "direct";
-export type ConcernCategory = "general" | "relationship" | "career" | "money" | "lifestyle";
 export type Element = "목" | "화" | "토" | "금" | "수";
 export type YinYang = "음" | "양";
 export type RiskLevel = "안정" | "주의" | "경계" | "위험" | "고위험";
@@ -20,8 +19,6 @@ export interface BirthInput {
   region: string;
   trueSolarTime: boolean;
   intensity: Intensity;
-  concernCategory: ConcernCategory;
-  concern: string;
   allowStorage: boolean;
 }
 
@@ -131,17 +128,8 @@ export interface AnalysisResult {
   riskLevel: RiskLevel;
   riskScore: number;
   weaknesses: WarningRule[];
+  weaknessEvidence: Record<string, string>;
   finalWarning: string;
-  focusAnalysis?: {
-    category: ConcernCategory;
-    matchedKeywords: string[];
-    rule: WarningRule;
-    linkedWeakness: WarningRule;
-    scenarioLabel?: string;
-    understoodContext?: string;
-    directAnswer?: string;
-    decisionChecklist?: string[];
-  };
   annualFlows: AnnualFlow[];
   overallAssessment: {
     verdict: string;
@@ -151,7 +139,7 @@ export interface AnalysisResult {
     protectiveFactor: string;
     currentFlow: string;
     firstPriority: string;
-    focusConclusion?: string;
+    conclusion: string;
   };
 }
 

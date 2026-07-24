@@ -1,6 +1,6 @@
 import { getSolarTerm } from "manseryeok";
 import { describe, expect, it } from "vitest";
-import { analyzeChart, calculateRisk, deduplicateWarnings, selectSectionRules, tone } from "../app/lib/analysisEngine";
+import { analyzeChart, buildPersonalizedActions, calculateRisk, deduplicateWarnings, selectSectionRules, tone } from "../app/lib/analysisEngine";
 import { KoreanManseCalculator } from "../app/lib/fortuneCalculator";
 import { calculateAnnualFlows, detectSpiritStars } from "../app/lib/flowCalculator";
 import { defaultInput, demoProfiles } from "../app/lib/profiles";
@@ -122,12 +122,12 @@ describe("검증과 해석", () => {
     expect(duplicated).toHaveLength(result.weaknesses.length);
   });
 
-  it("서로 다른 개발 원국은 대부분 다른 핵심 약점 조합을 만든다", () => {
+  it("서로 다른 개발 원국은 모두 다른 핵심 약점 조합을 만든다", () => {
     const calculator = new KoreanManseCalculator();
     const signatures = demoProfiles.map(({ input }) =>
       analyzeChart(calculator.calculate(input)).weaknesses.map(({ id }) => id).join("|"),
     );
-    expect(new Set(signatures).size).toBeGreaterThanOrEqual(4);
+    expect(new Set(signatures).size).toBe(demoProfiles.length);
   });
 
   it("원국에 따라 분야별 경고도 다르게 선택한다", () => {
@@ -139,63 +139,30 @@ describe("검증과 해석", () => {
     expect(new Set(signatures).size).toBeGreaterThanOrEqual(3);
   });
 
-  it("구체적인 고민 키워드를 해당 분야 집중 풀이에 반영한다", () => {
-    const chart = new KoreanManseCalculator().calculate(defaultInput);
-    const result = analyzeChart(chart, {
-      category: "general",
-      concern: "상사와 계속 갈등이 생겨 감정적으로 퇴사하고 이직할까 고민입니다.",
+  it("모든 원국의 핵심 약점에 해당 일간 해석과 계산 근거를 포함한다", () => {
+    const calculator = new KoreanManseCalculator();
+    demoProfiles.forEach(({ input }) => {
+      const chart = calculator.calculate(input);
+      const result = analyzeChart(chart, 2026);
+      expect(result.weaknesses.some(({ id }) => id === `day-master-${chart.dayMaster}`)).toBe(true);
+      expect(Object.values(result.weaknessEvidence).every((evidence) => evidence.includes("원국"))).toBe(true);
     });
-    expect(result.focusAnalysis?.category).toBe("career");
-    expect(result.focusAnalysis?.rule.id).toBe("career-recognition-collapse");
-    expect(result.focusAnalysis?.matchedKeywords).toContain("퇴사");
-    expect(result.overallAssessment.focusConclusion).toContain("퇴사");
-    expect(result.overallAssessment.firstPriority).toBe(result.focusAnalysis?.decisionChecklist?.[0]);
   });
 
-  it("인테리어 비용 질문을 주거 결정으로 이해하고 직접 답변한다", () => {
-    const chart = new KoreanManseCalculator().calculate(defaultInput);
-    const result = analyzeChart(chart, {
-      category: "general",
-      concern: "38년 된 구축 아파트 인테리어에서 거실 발코니 확장 공사를 할까 말까? 비용 차이가 1000만원 넘게 난다.",
-    }, 2026);
-    expect(result.focusAnalysis?.category).toBe("money");
-    expect(result.focusAnalysis?.scenarioLabel).toBe("주거·인테리어 결정");
-    expect(result.focusAnalysis?.understoodContext).toContain("1000만원");
-    expect(result.focusAnalysis?.directAnswer).toContain("확장 공사");
-    expect(result.focusAnalysis?.decisionChecklist).toHaveLength(5);
-    expect(result.focusAnalysis?.rule.id).toBe("money-fear-freeze");
-    expect(result.overallAssessment.focusConclusion).toContain("실제 공간 효용");
-  });
-
-  it("할까·말까 표현보다 인테리어 상황 분류를 우선한다", () => {
-    const chart = new KoreanManseCalculator().calculate(defaultInput);
-    const result = analyzeChart(chart, {
-      category: "general",
-      concern: "이번에 집 인테리어를 하는데 베란다 확장을 거실만 할까 말까 고민이야.",
-    }, 2026);
-    expect(result.focusAnalysis?.scenarioLabel).toBe("주거·인테리어 결정");
-    expect(result.focusAnalysis?.category).toBe("money");
-    expect(result.focusAnalysis?.directAnswer).toContain("확장 공사");
-    expect(result.focusAnalysis?.decisionChecklist?.[0]).toContain("확장 없이");
-  });
-
-  it("친구에게 다시 물어볼지 묻는 질문에는 재접촉 시점과 문장을 직접 제안한다", () => {
-    const chart = new KoreanManseCalculator().calculate(defaultInput);
-    const result = analyzeChart(chart, {
-      category: "general",
-      concern: "친구가 화가 났는데 이유를 모르겠어 그래서 4일이 지난 지금 다시 그 이야기를 물어보는게 맞을까?",
-    }, 2026);
-    expect(result.focusAnalysis?.scenarioLabel).toBe("관계 회복·재접촉");
-    expect(result.focusAnalysis?.category).toBe("relationship");
-    expect(result.focusAnalysis?.understoodContext).toContain("4일이 지난 지금");
-    expect(result.focusAnalysis?.directAnswer).toContain("네. 이유를 모른 채 시간이 지났다면");
-    expect(result.focusAnalysis?.directAnswer).toContain("편할 때 알려줘");
-    expect(result.focusAnalysis?.rule.id).toBe("relationship-mind-reading");
+  it("원국별 금지 행동과 회복 행동 조합도 서로 달라진다", () => {
+    const calculator = new KoreanManseCalculator();
+    const signatures = demoProfiles.map(({ input }) => {
+      const chart = calculator.calculate(input);
+      const result = analyzeChart(chart, 2026);
+      const actions = buildPersonalizedActions(chart, result.weaknesses, selectSectionRules(chart));
+      return [...actions.prohibited, ...actions.rescue].join("|");
+    });
+    expect(new Set(signatures).size).toBe(demoProfiles.length);
   });
 
   it("원국과 현재 세운을 합친 최종 종합 판정을 만든다", () => {
     const chart = new KoreanManseCalculator().calculate(defaultInput);
-    const result = analyzeChart(chart, undefined, 2026);
+    const result = analyzeChart(chart, 2026);
     expect(result.overallAssessment.summary).toContain(`${chart.dayMaster} 일간`);
     expect(result.overallAssessment.currentFlow).toContain("2026년 병오");
     expect(result.overallAssessment.coreRisk).toContain(result.weaknesses[0].summary);
