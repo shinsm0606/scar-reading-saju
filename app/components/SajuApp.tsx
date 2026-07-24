@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { analyzeChart, buildPersonalizedActions, describeRuleMatch, selectSectionRules, tone } from "../lib/analysisEngine";
+import { analyzeChart, buildPersonalizedActions, tone } from "../lib/analysisEngine";
 import { KoreanManseCalculator } from "../lib/fortuneCalculator";
 import { defaultInput } from "../lib/profiles";
 import { decodeSharePayload, encodeSharePayload, sanitizeChartForShare } from "../lib/share";
@@ -201,18 +201,6 @@ function RuleCard({ rule, evidence, index, intensity }: { rule: WarningRule; evi
   );
 }
 
-function TextAnalysis({ title, rule, intensity, extra }: { title: string; rule: WarningRule; intensity: Intensity; extra: string[] }) {
-  return (
-    <div className="analysis-grid">
-      <div className="analysis-lead"><span>핵심 판독</span><h3>{tone(title, intensity)}</h3><p>{tone(rule.summary, intensity)}</p></div>
-      <div className="fact-list">
-        {extra.map((item, index) => <div key={item}><span>0{index + 1}</span><p>{tone(item, intensity)}</p></div>)}
-      </div>
-      <div className="order"><strong>지금 할 일</strong><p>{tone(rule.actionRules.join(" · "), intensity)}</p></div>
-    </div>
-  );
-}
-
 function LuckFlowReport({ chart, intensity }: { chart: AnalysisResult["chart"]; intensity: Intensity }) {
   const options = chart.luckFlow?.options ?? [];
   const currentYear = new Date().getFullYear();
@@ -243,6 +231,17 @@ function LuckFlowReport({ chart, intensity }: { chart: AnalysisResult["chart"]; 
             <div><span>{option.forward ? "FORWARD" : "REVERSE"}</span><h3>{option.label} 대운</h3></div>
             <p>첫 대운 약 <strong>{option.startAge}세</strong> · 세밀값 {option.startYears}년 {option.startMonths}개월 {option.startDays}일</p>
           </header>
+          {currentAge !== null && option.cycles.find((cycle) => currentAge >= cycle.startAge && currentAge <= cycle.endAge) && (
+            <div className="current-luck-summary">
+              <span>CURRENT CYCLE · 현재 대운 총평</span>
+              <strong>
+                {option.cycles.find((cycle) => currentAge >= cycle.startAge && currentAge <= cycle.endAge)?.startAge}–
+                {option.cycles.find((cycle) => currentAge >= cycle.startAge && currentAge <= cycle.endAge)?.endAge}세 ·
+                {" "}{option.cycles.find((cycle) => currentAge >= cycle.startAge && currentAge <= cycle.endAge)?.korean} 대운
+              </strong>
+              <p>{tone(option.cycles.find((cycle) => currentAge >= cycle.startAge && currentAge <= cycle.endAge)?.assessment ?? "", intensity)}</p>
+            </div>
+          )}
           <div className="luck-track">
             {option.cycles.map((cycle) => {
               const active = currentAge !== null && currentAge >= cycle.startAge && currentAge <= cycle.endAge;
@@ -251,7 +250,11 @@ function LuckFlowReport({ chart, intensity }: { chart: AnalysisResult["chart"]; 
                   <span>{cycle.startAge}–{cycle.endAge}세</span>
                   <strong>{cycle.korean}</strong>
                   <b>{cycle.element} · {cycle.tenGod}/{cycle.branchTenGod}</b>
-                  <p>{cycle.interactions.length ? cycle.interactions.join(" · ") : "원국 지지와 직접 관계 적음"}</p>
+                  <p className="luck-relations">{cycle.interactions.length ? cycle.interactions.join(" · ") : "원국 지지와 직접 관계 적음"}</p>
+                  <p className="luck-assessment">{tone(
+                    cycle.assessment ?? `${cycle.tenGod}/${cycle.branchTenGod} 역할이 강조되는 시기입니다. 원국과의 관계를 확인하며 속도보다 행동 기준을 먼저 세우십시오.`,
+                    intensity,
+                  )}</p>
                   {active && <em>{currentYear}년 기준 현재 구간</em>}
                 </article>
               );
@@ -331,17 +334,10 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
   const elementEntries = Object.entries(chart.elementDistribution) as [Element, number][];
   const maxElement = [...elementEntries].sort((a, b) => b[1] - a[1])[0][0];
   const minElement = [...elementEntries].sort((a, b) => a[1] - b[1])[0][0];
-  const sectionRules = useMemo(() => selectSectionRules(chart), [chart]);
   const personalizedActions = useMemo(
-    () => buildPersonalizedActions(chart, result.weaknesses, sectionRules),
-    [chart, result.weaknesses, sectionRules],
+    () => buildPersonalizedActions(chart, result.weaknesses),
+    [chart, result.weaknesses],
   );
-  const sectionFacts = (rule: WarningRule) => [
-    describeRuleMatch(rule, chart),
-    rule.detailedReason,
-    `실제로는 ${rule.warningSigns.slice(0, 2).join(" · ")} 행동으로 드러나기 쉽습니다.`,
-    `방치하면 ${rule.consequences}`,
-  ];
   const notify = (message: string) => { setNotice(message); window.setTimeout(() => setNotice(""), 1800); };
   const reportText = useMemo(() => [
     `${name}님의 사주 경고 보고서`,
@@ -450,60 +446,31 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
           <div className="weaknesses">{result.weaknesses.map((rule, index) => <RuleCard key={rule.id} rule={rule} evidence={result.weaknessEvidence[rule.id]} index={index} intensity={intensity} />)}</div>
         </ReportSection>
 
-        <ReportSection number="D" title="성격의 어두운 면" subtitle="SHADOW PATTERN">
-          <TextAnalysis title={result.weaknesses[1].title} rule={result.weaknesses[1]} intensity={intensity} extra={sectionFacts(result.weaknesses[1])} />
-        </ReportSection>
-
-        {sectionRules.relationship && (
-          <ReportSection number="E" title="인간관계 경고" subtitle="RELATIONSHIP ALERT">
-            <TextAnalysis title={sectionRules.relationship.title} rule={sectionRules.relationship} intensity={intensity} extra={sectionFacts(sectionRules.relationship)} />
-          </ReportSection>
-        )}
-
-        {sectionRules.career && (
-          <ReportSection number="F" title="직업과 조직생활 경고" subtitle="CAREER & ORGANIZATION">
-            <TextAnalysis title={sectionRules.career.title} rule={sectionRules.career} intensity={intensity} extra={sectionFacts(sectionRules.career)} />
-          </ReportSection>
-        )}
-
-        {sectionRules.money && (
-          <ReportSection number="G" title="재물 경고" subtitle="MONEY RISK">
-            <TextAnalysis title={sectionRules.money.title} rule={sectionRules.money} intensity={intensity} extra={sectionFacts(sectionRules.money)} />
-          </ReportSection>
-        )}
-
-        {sectionRules.lifestyle && (
-          <ReportSection number="H" title="건강과 생활 습관 주의" subtitle="LIFESTYLE CAUTION">
-            <TextAnalysis title={sectionRules.lifestyle.title} rule={sectionRules.lifestyle} intensity={intensity} extra={sectionFacts(sectionRules.lifestyle)} />
-            <p className="medical-note">이 내용은 의학적 진단이 아닙니다. 지속적인 통증이나 이상 증상은 반드시 의료 전문가와 상담하십시오.</p>
-          </ReportSection>
-        )}
-
-        <ReportSection number="I" title="대운의 흐름" subtitle="10-YEAR LUCK CYCLES">
+        <ReportSection number="D" title="대운의 흐름" subtitle="10-YEAR LUCK CYCLES">
           <LuckFlowReport chart={chart} intensity={intensity} />
         </ReportSection>
 
-        <ReportSection number="J" title="연도별 세운 경고" subtitle="ANNUAL FLOW">
+        <ReportSection number="E" title="연도별 세운 경고" subtitle="ANNUAL FLOW">
           <AnnualFlowReport result={result} intensity={intensity} />
         </ReportSection>
 
-        <ReportSection number="K" title="재미로 보는 보조 신살" subtitle="SYMBOLIC STARS">
+        <ReportSection number="F" title="재미로 보는 보조 신살" subtitle="SYMBOLIC STARS">
           <SpiritStarReport chart={chart} intensity={intensity} />
         </ReportSection>
 
-        <ReportSection number="L" title="절대 하면 안 되는 행동 5가지" subtitle="DO NOT">
+        <ReportSection number="G" title="절대 하면 안 되는 행동 5가지" subtitle="DO NOT">
           <ol className="command-list prohibited">
             {personalizedActions.prohibited.map((item, index) => <li key={item}><span>{index + 1}</span>{tone(item, intensity)}</li>)}
           </ol>
         </ReportSection>
 
-        <ReportSection number="M" title="당신을 살리는 행동 5가지" subtitle="SURVIVAL RULES">
+        <ReportSection number="H" title="당신을 살리는 행동 5가지" subtitle="SURVIVAL RULES">
           <ol className="command-list rescue">
             {personalizedActions.rescue.map((item, index) => <li key={item}><span>{index + 1}</span>{tone(item, intensity)}</li>)}
           </ol>
         </ReportSection>
 
-        <ReportSection number="N" title="최종 종합 판정" subtitle="OVERALL ASSESSMENT">
+        <ReportSection number="I" title="최종 종합 판정" subtitle="OVERALL ASSESSMENT">
           <div className="overall-assessment">
             <header>
               <div className="overall-grade">
@@ -547,7 +514,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
         </ReportSection>
 
         <section className="final-warning reveal">
-          <p>O · FINAL WARNING</p>
+          <p>J · FINAL WARNING</p>
           <blockquote>“{tone(result.finalWarning, intensity)}”</blockquote>
           <span>운명은 확정된 사건이 아니라, 반복되는 선택을 알아차릴 때 달라지는 패턴입니다.</span>
         </section>

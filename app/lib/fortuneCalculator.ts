@@ -165,6 +165,8 @@ export class KoreanManseCalculator implements FortuneCalculator {
       input,
       result,
       (gender) => calculateFourPillars({ ...birthInfo, gender }),
+      excessiveElements,
+      deficientElements,
     );
     const spiritStars = buildSpiritStars(result, input.timeUnknown);
     return {

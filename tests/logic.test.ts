@@ -1,6 +1,6 @@
 import { getSolarTerm } from "manseryeok";
 import { describe, expect, it } from "vitest";
-import { analyzeChart, buildPersonalizedActions, calculateRisk, deduplicateWarnings, selectSectionRules, tone } from "../app/lib/analysisEngine";
+import { analyzeChart, buildPersonalizedActions, calculateRisk, deduplicateWarnings, tone } from "../app/lib/analysisEngine";
 import { KoreanManseCalculator } from "../app/lib/fortuneCalculator";
 import { calculateAnnualFlows, detectSpiritStars } from "../app/lib/flowCalculator";
 import { defaultInput, demoProfiles } from "../app/lib/profiles";
@@ -130,15 +130,6 @@ describe("검증과 해석", () => {
     expect(new Set(signatures).size).toBe(demoProfiles.length);
   });
 
-  it("원국에 따라 분야별 경고도 다르게 선택한다", () => {
-    const calculator = new KoreanManseCalculator();
-    const signatures = demoProfiles.map(({ input }) => {
-      const rules = selectSectionRules(calculator.calculate(input));
-      return [rules.relationship.id, rules.career.id, rules.money.id, rules.lifestyle.id].join("|");
-    });
-    expect(new Set(signatures).size).toBeGreaterThanOrEqual(3);
-  });
-
   it("모든 원국의 핵심 약점에 해당 일간 해석과 계산 근거를 포함한다", () => {
     const calculator = new KoreanManseCalculator();
     demoProfiles.forEach(({ input }) => {
@@ -154,7 +145,7 @@ describe("검증과 해석", () => {
     const signatures = demoProfiles.map(({ input }) => {
       const chart = calculator.calculate(input);
       const result = analyzeChart(chart, 2026);
-      const actions = buildPersonalizedActions(chart, result.weaknesses, selectSectionRules(chart));
+      const actions = buildPersonalizedActions(chart, result.weaknesses);
       return [...actions.prohibited, ...actions.rescue].join("|");
     });
     expect(new Set(signatures).size).toBe(demoProfiles.length);
@@ -175,6 +166,17 @@ describe("검증과 해석", () => {
     expect(flows).toHaveLength(7);
     expect(flows.find(({ year }) => year === 2026)?.korean).toBe("병오");
     expect(flows.every(({ action, warning }) => action.length > 0 && warning.length > 0)).toBe(true);
+  });
+
+  it("모든 대운 구간에 원국과 연결된 이해하기 쉬운 평을 만든다", () => {
+    const calculator = new KoreanManseCalculator();
+    demoProfiles.forEach(({ input }) => {
+      const chart = calculator.calculate(input);
+      const cycles = chart.luckFlow?.options.flatMap(({ cycles }) => cycles) ?? [];
+      expect(cycles.length).toBeGreaterThan(0);
+      expect(cycles.every(({ assessment }) => assessment.length >= 40)).toBe(true);
+      expect(cycles.every(({ assessment, tenGod }) => assessment.includes(tenGod))).toBe(true);
+    });
   });
 
   it("년지·일지 삼합 기준 도화와 역마를 재현 가능하게 판정한다", () => {

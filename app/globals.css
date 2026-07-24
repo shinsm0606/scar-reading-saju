@@ -177,14 +177,20 @@ button { color: inherit; }
 .luck-option > header span { color: var(--red-bright); font: 10px monospace; letter-spacing: .14em; }
 .luck-option > header h3 { margin: 5px 0 0; font: 700 25px var(--serif); }
 .luck-option > header p { margin: 0; color: #827a6f; font-size: 13px; }
-.luck-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(156px, 1fr); overflow-x: auto; border: 1px solid #39342c; scrollbar-color: #6f241e #15130f; }
-.luck-track article { position: relative; min-height: 220px; padding: 18px; border-right: 1px solid #39342c; background: #12110e; }
+.current-luck-summary { margin: 0 0 18px; border: 1px solid #6b352e; border-left: 4px solid var(--red-bright); background: linear-gradient(125deg, rgba(168,36,27,.18), #12100d 62%); padding: 24px 28px; }
+.current-luck-summary > span { display: block; color: var(--red-bright); font: 10px monospace; letter-spacing: .12em; }
+.current-luck-summary > strong { display: block; margin: 10px 0; color: var(--paper); font: 700 24px var(--serif); }
+.current-luck-summary > p { margin: 0; color: #b6aa99; line-height: 1.8; }
+.luck-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(270px, 1fr); overflow-x: auto; border: 1px solid #39342c; scrollbar-color: #6f241e #15130f; }
+.luck-track article { position: relative; min-height: 350px; padding: 22px; border-right: 1px solid #39342c; background: #12110e; }
 .luck-track article:last-child { border-right: 0; }
 .luck-track article.active { background: linear-gradient(180deg, rgba(168,36,27,.2), #12110e); box-shadow: inset 0 3px var(--red-bright); }
 .luck-track article > span { color: #756e63; font: 10px monospace; }
 .luck-track article > strong { display: block; margin: 18px 0 8px; color: var(--paper); font: 700 35px var(--serif); }
 .luck-track article > b { color: #b8ac9a; font-size: 12px; }
-.luck-track article > p { color: #746c61; font-size: 11px; line-height: 1.6; }
+.luck-track article > p { font-size: 11px; line-height: 1.65; }
+.luck-relations { color: #746c61; min-height: 36px; }
+.luck-assessment { margin-top: 16px; padding-top: 15px; border-top: 1px solid #302a24; color: #aaa091; }
 .luck-track article > em { display: block; margin-top: 14px; color: var(--red-bright); font: normal 10px monospace; }
 .annual-intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; color: #8d8477; }
 .annual-intro > p { max-width: 700px; line-height: 1.7; }

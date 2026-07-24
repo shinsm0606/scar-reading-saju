@@ -65,6 +65,7 @@ export interface LuckCycle {
   tenGod: string;
   branchTenGod: string;
   interactions: string[];
+  assessment: string;
 }
 
 export interface LuckOption {

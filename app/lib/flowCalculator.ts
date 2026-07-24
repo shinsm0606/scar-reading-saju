@@ -95,6 +95,8 @@ function convertLuckOption(
   dayMaster: HeavenlyStem,
   natalBranches: string[],
   label: string,
+  excessiveElements: Element[],
+  deficientElements: Element[],
 ): LuckOption {
   return {
     forward: info.forward,
@@ -103,17 +105,39 @@ function convertLuckOption(
     startYears: info.startYears,
     startMonths: info.startMonths,
     startDays: info.startDays,
-    cycles: info.pillars.map((cycle) => ({
-      startAge: cycle.age,
-      endAge: cycle.age + 9,
-      stem: cycle.pillar.heavenlyStem,
-      branch: cycle.pillar.earthlyBranch,
-      korean: cycle.korean,
-      element: getHeavenlyStemElement(cycle.pillar.heavenlyStem) as Element,
-      tenGod: getTenGod(dayMaster, cycle.pillar.heavenlyStem),
-      branchTenGod: getBranchTenGod(dayMaster, cycle.pillar.earthlyBranch),
-      interactions: branchRelations(cycle.pillar.earthlyBranch, natalBranches),
-    })),
+    cycles: info.pillars.map((cycle) => {
+      const element = getHeavenlyStemElement(cycle.pillar.heavenlyStem) as Element;
+      const tenGod = getTenGod(dayMaster, cycle.pillar.heavenlyStem);
+      const branchTenGod = getBranchTenGod(dayMaster, cycle.pillar.earthlyBranch);
+      const interactions = branchRelations(cycle.pillar.earthlyBranch, natalBranches);
+      const difficultRelations = interactions.filter((relation) => / 충$| 형$| 파$| 해$/.test(relation));
+      const combinedRelations = interactions.filter((relation) => relation.endsWith(" 합"));
+      const elementReading = deficientElements.includes(element)
+        ? `부족했던 ${element}를 보완해 익숙하지 않은 방식이 성장 장치가 되고`
+        : excessiveElements.includes(element)
+          ? `이미 강한 ${element}가 더해져 장점이 과속하기 쉬우므로 검토 기준이 필요하고`
+          : `${element}가 새로운 역할을 요구하므로 기존 방식만 고집하지 않는 것이 중요하고`;
+      const relationReading = difficultRelations.length > 0
+        ? `${difficultRelations.join(" · ")} 자극이 있어 변화와 갈등을 한 번에 결론내리지 마십시오.`
+        : combinedRelations.length > 0
+          ? `${combinedRelations.join(" · ")} 흐름은 협력에 유리하지만 역할과 책임은 분리해야 합니다.`
+          : "원국과의 직접 충돌이 적어 한 분야를 꾸준히 축적하는 편이 유리합니다.";
+      const roleTheme = tenGodThemes[tenGod]
+        ? `${tenGod}: ${tenGodThemes[tenGod].theme.replace(/해$/, "10년")}`
+        : `${tenGod} 역할이 부각되는 10년`;
+      return {
+        startAge: cycle.age,
+        endAge: cycle.age + 9,
+        stem: cycle.pillar.heavenlyStem,
+        branch: cycle.pillar.earthlyBranch,
+        korean: cycle.korean,
+        element,
+        tenGod,
+        branchTenGod,
+        interactions,
+        assessment: `${roleTheme}이며 ${branchTenGod}의 반응도 함께 작동합니다. ${elementReading}, ${relationReading}`,
+      };
+    }),
   };
 }
 
@@ -121,6 +145,8 @@ export function buildLuckFlow(
   input: BirthInput,
   result: FourPillarsDetail,
   calculateWithGender: (gender: "male" | "female") => FourPillarsDetail,
+  excessiveElements: Element[],
+  deficientElements: Element[],
 ): LuckFlow {
   const dayMaster = result.day.heavenlyStem;
   const natalBranches = [result.year, result.month, result.day, ...(input.timeUnknown ? [] : [result.hour])]
@@ -134,6 +160,8 @@ export function buildLuckFlow(
         dayMaster,
         natalBranches,
         result.luckPillars.forward ? "순행" : "역행",
+        excessiveElements,
+        deficientElements,
       )],
     };
   }
@@ -151,6 +179,8 @@ export function buildLuckFlow(
       dayMaster,
       natalBranches,
       info.forward ? "순행 가능성" : "역행 가능성",
+      excessiveElements,
+      deficientElements,
     )),
   };
 }

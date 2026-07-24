@@ -1,12 +1,8 @@
 import { actionRules } from "../data/actionRules";
 import { balanceInterpretations } from "../data/balanceInterpretations";
-import { careerWarnings } from "../data/careerWarnings";
 import { dayMasterInterpretations } from "../data/dayMasterInterpretations";
 import { elementInterpretations } from "../data/elementInterpretations";
 import { interactionInterpretations } from "../data/interactionInterpretations";
-import { lifestyleWarnings } from "../data/lifestyleWarnings";
-import { moneyWarnings } from "../data/moneyWarnings";
-import { relationshipWarnings } from "../data/relationshipWarnings";
 import { tenGodInterpretations } from "../data/tenGodInterpretations";
 import type { AnalysisResult, Element, FortuneChart, Intensity, RiskLevel, WarningRule } from "../types/fortune";
 import { calculateAnnualFlows } from "./flowCalculator";
@@ -234,30 +230,15 @@ export function analyzeChart(chart: FortuneChart, referenceYear = new Date().get
   return { ...partialResult, overallAssessment: buildOverallAssessment(partialResult) };
 }
 
-export function selectSectionRules(chart: FortuneChart): {
-  relationship: WarningRule | null;
-  career: WarningRule | null;
-  money: WarningRule | null;
-  lifestyle: WarningRule | null;
-} {
-  const choose = (rules: WarningRule[]): WarningRule | null => rankMatchingRules(rules, chart)[0] ?? null;
-  return {
-    relationship: choose(relationshipWarnings),
-    career: choose(careerWarnings),
-    money: choose(moneyWarnings),
-    lifestyle: choose(lifestyleWarnings),
-  };
-}
-
 export function buildPersonalizedActions(
   chart: FortuneChart,
   weaknesses: WarningRule[],
-  sectionRules: ReturnType<typeof selectSectionRules>,
 ): { prohibited: string[]; rescue: string[] } {
-  const matchedSections = Object.values(sectionRules).filter((rule): rule is WarningRule => rule !== null);
-  const sourceRules = deduplicateWarnings([...weaknesses, ...matchedSections]);
+  const sourceRules = deduplicateWarnings(weaknesses);
   const prohibited = sourceRules
-    .map((rule) => `“${rule.warningSigns[0]}” 신호가 보일 때 중요한 결정을 밀어붙이지 마십시오.`)
+    .flatMap((rule) => rule.warningSigns.slice(0, 2).map(
+      (sign) => `“${sign}” 신호가 보일 때 중요한 결정을 밀어붙이지 마십시오.`,
+    ))
     .filter((item, index, items) => items.indexOf(item) === index)
     .slice(0, 5);
   const rescue = sourceRules
