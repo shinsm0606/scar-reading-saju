@@ -1,6 +1,6 @@
 import { getSolarTerm } from "manseryeok";
 import { describe, expect, it } from "vitest";
-import { analyzeChart, calculateRisk, deduplicateWarnings, tone } from "../app/lib/analysisEngine";
+import { analyzeChart, calculateRisk, deduplicateWarnings, selectSectionRules, tone } from "../app/lib/analysisEngine";
 import { KoreanManseCalculator } from "../app/lib/fortuneCalculator";
 import { defaultInput, demoProfiles } from "../app/lib/profiles";
 import { decodeSharePayload, encodeSharePayload } from "../app/lib/share";
@@ -100,6 +100,34 @@ describe("검증과 해석", () => {
     expect(duplicated).toHaveLength(result.weaknesses.length);
   });
 
+  it("서로 다른 개발 원국은 대부분 다른 핵심 약점 조합을 만든다", () => {
+    const calculator = new KoreanManseCalculator();
+    const signatures = demoProfiles.map(({ input }) =>
+      analyzeChart(calculator.calculate(input)).weaknesses.map(({ id }) => id).join("|"),
+    );
+    expect(new Set(signatures).size).toBeGreaterThanOrEqual(4);
+  });
+
+  it("원국에 따라 분야별 경고도 다르게 선택한다", () => {
+    const calculator = new KoreanManseCalculator();
+    const signatures = demoProfiles.map(({ input }) => {
+      const rules = selectSectionRules(calculator.calculate(input));
+      return [rules.relationship.id, rules.career.id, rules.money.id, rules.lifestyle.id].join("|");
+    });
+    expect(new Set(signatures).size).toBeGreaterThanOrEqual(3);
+  });
+
+  it("구체적인 고민 키워드를 해당 분야 집중 풀이에 반영한다", () => {
+    const chart = new KoreanManseCalculator().calculate(defaultInput);
+    const result = analyzeChart(chart, {
+      category: "general",
+      concern: "상사와 계속 갈등이 생겨 감정적으로 퇴사하고 이직할까 고민입니다.",
+    });
+    expect(result.focusAnalysis?.category).toBe("career");
+    expect(result.focusAnalysis?.rule.id).toBe("career-recognition-collapse");
+    expect(result.focusAnalysis?.matchedKeywords).toContain("퇴사");
+  });
+
   it("풀이 강도에 따라 표현이 달라진다", () => {
     const text = "중요한 결정을 하지 마십시오";
     expect(tone(text, "mild")).not.toBe(tone(text, "direct"));
@@ -129,6 +157,7 @@ describe("저장과 공유 개인정보", () => {
     expect(decoded?.chart.pillars).toEqual(chart.pillars);
     expect(decoded).not.toHaveProperty("year");
     expect(decoded).not.toHaveProperty("hour");
+    expect(decoded).not.toHaveProperty("concern");
     expect(encoded).not.toContain(String(defaultInput.year));
   });
 });

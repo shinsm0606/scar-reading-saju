@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { analyzeChart, sectionRules, tone } from "../lib/analysisEngine";
+import { analyzeChart, selectSectionRules, tone } from "../lib/analysisEngine";
 import { KoreanManseCalculator } from "../lib/fortuneCalculator";
 import { defaultInput } from "../lib/profiles";
 import { decodeSharePayload, encodeSharePayload } from "../lib/share";
 import { deleteBirthInput, loadBirthInput, saveBirthInput } from "../lib/storage";
 import { validateBirthInput } from "../lib/validation";
-import type { AnalysisResult, BirthInput, Element, Intensity, SharePayload, WarningRule } from "../types/fortune";
+import type { AnalysisResult, BirthInput, ConcernCategory, Element, Intensity, SharePayload, WarningRule } from "../types/fortune";
 
 type Screen = "intro" | "form" | "loading" | "result";
 const loadingSteps = ["사주 원국 확인 중", "오행 불균형 분석 중", "반복되는 약점 탐색 중", "최종 경고문 작성 중"];
@@ -46,7 +46,7 @@ function Intro({ onStart }: { onStart: () => void }) {
       <div className="paper-grain" />
       <header className="topbar">
         <div className="brand-mark">傷</div>
-        <div><strong>흉터까지 읽는 사주</strong><span>DEMO ANALYSIS / 01</span></div>
+        <div><strong>흉터까지 읽는 사주</strong><span>MANSERYEOK ANALYSIS / 01</span></div>
       </header>
       <section className="hero">
         <p className="eyebrow"><span /> 자기 성찰 위험성 분석 보고서</p>
@@ -142,6 +142,31 @@ function InputForm({ initial, onSubmit, onBack }: { initial: BirthInput; onSubmi
               </div>
               <p className="field-help">욕설·비하·사건 단정 없이, 같은 분석을 선택한 강도에 맞춰 표현합니다.</p>
             </Field>
+            <Field label="지금 가장 고민되는 문제 (선택)" error={errors.concern} className="wide">
+              <div className="intensity-row">
+                {([
+                  ["general", "자동 분류"],
+                  ["relationship", "관계·연애"],
+                  ["career", "직업·이직"],
+                  ["money", "돈·투자"],
+                  ["lifestyle", "생활·스트레스"],
+                ] as [ConcernCategory, string][]).map(([value, label]) => (
+                  <Choice key={value} name="concernCategory" value={value} checked={input.concernCategory === value} onChange={() => update("concernCategory", value)}>{label}</Choice>
+                ))}
+              </div>
+              <textarea
+                id="concern"
+                aria-label="현재 고민이나 질문"
+                value={input.concern}
+                maxLength={600}
+                onChange={(event) => update("concern", event.target.value)}
+                placeholder="예: 상사와 부딪힐 때마다 감정적으로 퇴사하고 싶습니다. 지금 이직을 결정할 때 특히 조심할 행동이 궁금합니다."
+              />
+              <div className="concern-meta">
+                <p className="field-help">상황, 반복 행동, 망설이는 선택을 구체적으로 적을수록 원국 신호와 맞는 경고를 더 정확히 고릅니다. 실명·회사명·계좌 등 식별 정보는 적지 마십시오.</p>
+                <span>{input.concern.length} / 600</span>
+              </div>
+            </Field>
           </div>
           <div className="privacy-box">
             <label className="check-line"><input type="checkbox" checked={input.allowStorage} onChange={(e) => update("allowStorage", e.target.checked)} /> 이 기기에 입력값 저장</label>
@@ -212,12 +237,14 @@ function TextAnalysis({ title, rule, intensity, extra }: { title: string; rule: 
   );
 }
 
-function Result({ name, intensity, result, onRestart, onReview }: { name: string; intensity: Intensity; result: AnalysisResult; onRestart: () => void; onReview: () => void }) {
+function Result({ name, concern, intensity, result, onRestart, onReview }: { name: string; concern: string; intensity: Intensity; result: AnalysisResult; onRestart: () => void; onReview: () => void }) {
   const [notice, setNotice] = useState("");
   const { chart } = result;
   const elementEntries = Object.entries(chart.elementDistribution) as [Element, number][];
   const maxElement = [...elementEntries].sort((a, b) => b[1] - a[1])[0][0];
   const minElement = [...elementEntries].sort((a, b) => a[1] - b[1])[0][0];
+  const topTenGod = Object.entries(chart.tenGodDistribution).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "비견";
+  const sectionRules = useMemo(() => selectSectionRules(chart), [chart]);
   const notify = (message: string) => { setNotice(message); window.setTimeout(() => setNotice(""), 1800); };
   const reportText = useMemo(() => [
     `${name}님의 사주 경고 보고서`,
@@ -325,17 +352,39 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
           <div className="weaknesses">{result.weaknesses.map((rule, index) => <RuleCard key={rule.id} rule={rule} index={index} intensity={intensity} />)}</div>
         </ReportSection>
 
+        {result.focusAnalysis && (
+          <ReportSection number="C+" title="현재 고민 집중 풀이" subtitle="PERSONAL FOCUS">
+            <div className="focus-question">
+              <span>입력한 고민</span>
+              <blockquote>“{concern}”</blockquote>
+              <small>이 내용은 이 화면에서만 분석에 사용되며 공유 링크와 공유 이미지에는 포함되지 않습니다.</small>
+            </div>
+            <TextAnalysis
+              title={result.focusAnalysis.rule.title}
+              rule={result.focusAnalysis.rule}
+              intensity={intensity}
+              extra={[
+                `${result.focusAnalysis.linkedWeakness.title}이라는 원국 신호가 지금 고민의 취약 지점과 겹칩니다.`,
+                result.focusAnalysis.matchedKeywords.length > 0
+                  ? `입력한 내용에서 ${result.focusAnalysis.matchedKeywords.join(" · ")} 문제를 핵심 초점으로 잡았습니다.`
+                  : "특정 결과를 예언하는 대신, 입력한 상황에서 반복될 행동과 판단 습관을 중심으로 읽었습니다.",
+                `강한 ${maxElement} 기운과 두드러진 ${topTenGod} 성향이 올라오는 순간에는 즉시 결론보다 기록과 제3자 검토가 먼저입니다.`,
+              ]}
+            />
+          </ReportSection>
+        )}
+
         <ReportSection number="D" title="성격의 어두운 면" subtitle="SHADOW PATTERN">
           <TextAnalysis title="평소의 침착함이 압박 속에서는 통제로 바뀔 수 있습니다" rule={result.weaknesses[1]} intensity={intensity} extra={[
-            "겉으로는 책임감 있고 단단해 보이지만, 내면에서는 평가와 거절에 민감하게 반응할 수 있습니다.",
+            `겉으로는 ${maxElement}의 장점이 선명하지만, 내면에서는 부족한 ${minElement}의 방식으로 상황을 조절하는 데 빈틈이 생길 수 있습니다.`,
             "스트레스가 심하면 설명보다 지시가 늘고, 타인은 그 태도를 불신으로 받아들일 수 있습니다.",
-            "갈등에서 논리만 강조하는 방어는 자신의 상처와 책임을 동시에 보지 못하게 만듭니다.",
+            `${topTenGod} 성향이 압박 속에서 과해지면 자기 방어가 먼저 나와 자신의 책임을 늦게 볼 수 있습니다.`,
           ]} />
         </ReportSection>
 
         <ReportSection number="E" title="인간관계 경고" subtitle="RELATIONSHIP ALERT">
           <TextAnalysis title={sectionRules.relationship.title} rule={sectionRules.relationship} intensity={intensity} extra={[
-            "가까운 사람일수록 기대를 설명하지 않고 알아주기를 바랄 수 있습니다.",
+            `${maxElement} 기운의 장점이 과해지는 순간, 가까운 사람에게 속도나 기준을 맞추라고 압박할 수 있습니다.`,
             "연애에서는 답장과 말투를 애정의 증거로 해석하는 순간 갈등이 커집니다.",
             "말을 자주 바꾸고 책임을 전가하는 사람과는 속도를 늦추고 경계를 확인하십시오.",
             "관계가 무너지기 직전에는 질문이 줄고 혼자 내린 결론이 늘어납니다.",
@@ -344,7 +393,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
 
         <ReportSection number="F" title="직업과 조직생활 경고" subtitle="CAREER & ORGANIZATION">
           <TextAnalysis title={sectionRules.career.title} rule={sectionRules.career} intensity={intensity} extra={[
-            "자율성이 있는 환경에서 강하지만 목적 없는 보고와 권위적인 말투에는 빠르게 소진됩니다.",
+            `${topTenGod} 성향을 생산적으로 쓸 수 있는 명확한 역할과 중간 피드백이 있는 환경이 맞습니다.`,
             "동료는 빠른 판단보다 이미 결론을 정해 둔 태도를 부담스러워할 수 있습니다.",
             "성과가 막히는 가장 큰 원인은 완벽한 준비가 아니라 중간 검토를 늦추는 습관입니다.",
             "감정이 올라온 날에는 퇴사 의사를 전하지 말고, 72시간 뒤 조건표를 다시 보십시오.",
@@ -353,7 +402,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
 
         <ReportSection number="G" title="재물 경고" subtitle="MONEY RISK">
           <TextAnalysis title={sectionRules.money.title} rule={sectionRules.money} intensity={intensity} extra={[
-            "돈을 버는 속도보다 계획 밖의 관계 비용과 보상 소비가 새는 구멍이 될 수 있습니다.",
+            `강한 ${maxElement} 기운으로 결제나 투자 판단이 빨라질 때, 부족한 ${minElement}의 검증 절차를 의도적으로 추가해야 합니다.`,
             "손실 뒤 만회 심리가 올라오면 투자 금액을 키우지 말고 판단을 중단하십시오.",
             "보증·명의 대여·구두 공동투자는 하지 말고, 지인 거래도 반드시 계약서를 작성하십시오.",
             "투자 판단은 감정과 별개인 전문 자료로 다시 검증해야 합니다.",
@@ -362,7 +411,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
 
         <ReportSection number="H" title="건강과 생활 습관 주의" subtitle="LIFESTYLE CAUTION">
           <TextAnalysis title={sectionRules.lifestyle.title} rule={sectionRules.lifestyle} intensity={intensity} extra={[
-            "과로, 수면 부족, 불규칙한 식사는 감정 조절과 판단의 질을 먼저 떨어뜨립니다.",
+            `${maxElement}의 과한 사용을 쉬게 하고 ${minElement}의 리듬을 보완하는 생활 습관이 필요합니다.`,
             "분노와 긴장을 참는 것만으로 처리하면 가까운 사람에게 날카로운 방식으로 새어 나올 수 있습니다.",
             "활동량이 줄어든 주에는 짧은 산책부터 일정에 넣고 회복 시간을 업무처럼 확보하십시오.",
           ]} />
@@ -457,7 +506,7 @@ export function SajuApp() {
     setInput(value);
     saveBirthInput(window.localStorage, value);
     const chart = new KoreanManseCalculator().calculate(value);
-    const analysis = analyzeChart(chart);
+    const analysis = analyzeChart(chart, { category: value.concernCategory, concern: value.concern });
     setResult(analysis); setStep(0); setScreen("loading");
     let current = 0;
     timer.current = window.setInterval(() => {
@@ -479,5 +528,5 @@ export function SajuApp() {
   if (screen === "form") return <InputForm initial={input} onSubmit={startAnalysis} onBack={() => setScreen("intro")} />;
   if (screen === "loading") return <Loading step={step} />;
   if (!result) return null;
-  return <Result name={input.name} intensity={input.intensity} result={result} onRestart={restart} onReview={() => { window.scrollTo({ top: 0, behavior: "smooth" }); }} />;
+  return <Result name={input.name} concern={input.concern} intensity={input.intensity} result={result} onRestart={restart} onReview={() => { window.scrollTo({ top: 0, behavior: "smooth" }); }} />;
 }

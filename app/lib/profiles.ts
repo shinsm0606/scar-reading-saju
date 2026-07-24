@@ -3,7 +3,8 @@ import type { BirthInput } from "../types/fortune";
 export const defaultInput: BirthInput = {
   name: "", gender: "none", calendarType: "solar", leapMonth: false,
   year: 1992, month: 8, day: 17, hour: 9, minute: 0, timeUnknown: false,
-  region: "대한민국 서울", trueSolarTime: true, intensity: "direct", allowStorage: false,
+  region: "대한민국 서울", trueSolarTime: true, intensity: "direct",
+  concernCategory: "general", concern: "", allowStorage: false,
 };
 
 export const demoProfiles: Array<{ label: string; hint: string; input: BirthInput }> = [
