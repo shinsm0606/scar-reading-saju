@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { analyzeChart, selectSectionRules, tone } from "../lib/analysisEngine";
 import { KoreanManseCalculator } from "../lib/fortuneCalculator";
 import { defaultInput } from "../lib/profiles";
-import { decodeSharePayload, encodeSharePayload } from "../lib/share";
+import { decodeSharePayload, encodeSharePayload, sanitizeChartForShare } from "../lib/share";
 import { deleteBirthInput, loadBirthInput, saveBirthInput } from "../lib/storage";
 import { validateBirthInput } from "../lib/validation";
 import type { AnalysisResult, BirthInput, ConcernCategory, Element, Intensity, SharePayload, WarningRule } from "../types/fortune";
@@ -237,6 +237,118 @@ function TextAnalysis({ title, rule, intensity, extra }: { title: string; rule: 
   );
 }
 
+function LuckFlowReport({ chart, intensity }: { chart: AnalysisResult["chart"]; intensity: Intensity }) {
+  const options = chart.luckFlow?.options ?? [];
+  const currentYear = new Date().getFullYear();
+  const today = new Date();
+  const [birthYear, birthMonth, birthDay] = chart.solarDate.split("-").map(Number);
+  const hasPrivateBirthDate = Number.isFinite(birthYear) && Number.isFinite(birthMonth) && Number.isFinite(birthDay);
+  const birthdayPassed = today.getMonth() + 1 > birthMonth
+    || (today.getMonth() + 1 === birthMonth && today.getDate() >= birthDay);
+  const currentAge = hasPrivateBirthDate
+    ? Math.max(0, currentYear - birthYear - (birthdayPassed ? 0 : 1))
+    : null;
+
+  if (options.length === 0) {
+    return <p className="empty-flow">이 공유 보고서에는 대운 데이터가 없습니다. 처음부터 다시 입력하면 최신 계산 결과가 생성됩니다.</p>;
+  }
+
+  return (
+    <div className="luck-report">
+      {chart.luckFlow?.certainty === "alternatives" && (
+        <div className="flow-notice">
+          <strong>성별 미선택 · 대운 방향 미확정</strong>
+          <p>전통적인 순행·역행 판정에 성별이 사용되므로 두 가능성을 함께 표시합니다. 원국 자체는 변하지 않습니다.</p>
+        </div>
+      )}
+      {options.map((option) => (
+        <section className="luck-option" key={option.label}>
+          <header>
+            <div><span>{option.forward ? "FORWARD" : "REVERSE"}</span><h3>{option.label} 대운</h3></div>
+            <p>첫 대운 약 <strong>{option.startAge}세</strong> · 세밀값 {option.startYears}년 {option.startMonths}개월 {option.startDays}일</p>
+          </header>
+          <div className="luck-track">
+            {option.cycles.map((cycle) => {
+              const active = currentAge !== null && currentAge >= cycle.startAge && currentAge <= cycle.endAge;
+              return (
+                <article className={active ? "active" : ""} key={`${option.label}-${cycle.startAge}-${cycle.korean}`}>
+                  <span>{cycle.startAge}–{cycle.endAge}세</span>
+                  <strong>{cycle.korean}</strong>
+                  <b>{cycle.element} · {cycle.tenGod}/{cycle.branchTenGod}</b>
+                  <p>{cycle.interactions.length ? cycle.interactions.join(" · ") : "원국 지지와 직접 관계 적음"}</p>
+                  {active && <em>{currentYear}년 기준 현재 구간</em>}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+      <div className="order">
+        <strong>읽는 법</strong>
+        <p>{tone("대운은 사건의 확정표가 아닙니다. 해당 10년 동안 반복해서 자극될 역할과 행동 패턴을 확인하는 참고 흐름입니다.", intensity)}</p>
+      </div>
+    </div>
+  );
+}
+
+function AnnualFlowReport({ result, intensity }: { result: AnalysisResult; intensity: Intensity }) {
+  const currentYear = new Date().getFullYear();
+  return (
+    <div className="annual-report">
+      <div className="annual-intro">
+        <p>각 연도의 연주는 입춘 경계를 기준으로 계산합니다. 천간 십신과 원국 지지 관계를 함께 보되, 특정 사건을 예언하지 않습니다.</p>
+        <div><span>LOW</span><span>MEDIUM</span><span>HIGH</span></div>
+      </div>
+      <div className="annual-grid">
+        {result.annualFlows.map((flow) => (
+          <article className={`${flow.year === currentYear ? "current" : ""} pressure-${flow.pressure}`} key={flow.year}>
+            <header><span>{flow.year === currentYear ? "현재 세운" : `${flow.year} YEAR`}</span><b>자극도 {flow.pressure}</b></header>
+            <div className="annual-pillar"><strong>{flow.stem}</strong><strong>{flow.branch}</strong></div>
+            <h3>{flow.korean}년 · {flow.tenGod}/{flow.branchTenGod}</h3>
+            <p className="annual-theme">{flow.theme}</p>
+            <dl>
+              <div><dt>원국 관계</dt><dd>{flow.interactions.length ? flow.interactions.join(" · ") : "직접적인 합·충·형·파·해가 적음"}</dd></div>
+              <div><dt>경고</dt><dd>{tone(flow.warning, intensity)}</dd></div>
+              <div><dt>행동</dt><dd>{tone(flow.action, intensity)}</dd></div>
+            </dl>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SpiritStarReport({ chart, intensity }: { chart: AnalysisResult["chart"]; intensity: Intensity }) {
+  const stars = chart.spiritStars ?? [];
+  if (stars.length === 0) {
+    return <p className="empty-flow">이 공유 보고서에는 신살 데이터가 없습니다. 처음부터 다시 입력하면 최신 판정이 생성됩니다.</p>;
+  }
+  return (
+    <>
+      <div className="spirit-disclaimer">
+        <strong>보조 판독</strong>
+        <p>신살은 원국 전체를 대신하지 않습니다. 년지·일지 또는 일간에서 정한 기준 글자가 원국에 있는지만 확인합니다.</p>
+      </div>
+      <div className="spirit-grid">
+        {[...stars].sort((a, b) => Number(b.present) - Number(a.present)).map((star) => (
+          <article className={star.present ? "present" : "absent"} key={star.id}>
+            <header><span>{star.hanja}</span><b>{star.present ? "원국에 해당" : "미검출"}</b></header>
+            <h3>{star.name}</h3>
+            <p>{star.summary}</p>
+            <small>{star.basis}{star.present ? ` · 해당 지지 ${star.matchedBranches.join("·")}` : ""}</small>
+            {star.present && (
+              <dl>
+                <div><dt>경계</dt><dd>{tone(star.warning, intensity)}</dd></div>
+                <div><dt>활용</dt><dd>{tone(star.action, intensity)}</dd></div>
+              </dl>
+            )}
+          </article>
+        ))}
+      </div>
+    </>
+  );
+}
+
 function Result({ name, concern, intensity, result, onRestart, onReview }: { name: string; concern: string; intensity: Intensity; result: AnalysisResult; onRestart: () => void; onReview: () => void }) {
   const [notice, setNotice] = useState("");
   const { chart } = result;
@@ -259,7 +371,7 @@ function Result({ name, concern, intensity, result, onRestart, onReview }: { nam
     notify("결과 텍스트를 복사했습니다.");
   };
   const copyLink = async () => {
-    const payload: SharePayload = { v: 2, name, intensity, chart };
+    const payload: SharePayload = { v: 2, name, intensity, chart: sanitizeChartForShare(chart) };
     const url = new URL(window.location.href);
     url.search = `?report=${encodeSharePayload(payload)}`;
     await navigator.clipboard.writeText(url.toString());
@@ -418,7 +530,19 @@ function Result({ name, concern, intensity, result, onRestart, onReview }: { nam
           <p className="medical-note">이 내용은 의학적 진단이 아닙니다. 지속적인 통증이나 이상 증상은 반드시 의료 전문가와 상담하십시오.</p>
         </ReportSection>
 
-        <ReportSection number="I" title="절대 하면 안 되는 행동 5가지" subtitle="DO NOT">
+        <ReportSection number="I" title="대운의 흐름" subtitle="10-YEAR LUCK CYCLES">
+          <LuckFlowReport chart={chart} intensity={intensity} />
+        </ReportSection>
+
+        <ReportSection number="J" title="연도별 세운 경고" subtitle="ANNUAL FLOW">
+          <AnnualFlowReport result={result} intensity={intensity} />
+        </ReportSection>
+
+        <ReportSection number="K" title="재미로 보는 보조 신살" subtitle="SYMBOLIC STARS">
+          <SpiritStarReport chart={chart} intensity={intensity} />
+        </ReportSection>
+
+        <ReportSection number="L" title="절대 하면 안 되는 행동 5가지" subtitle="DO NOT">
           <ol className="command-list prohibited">
             {[
               "화가 난 상태에서 퇴사나 이별을 결정하지 마십시오.",
@@ -430,7 +554,7 @@ function Result({ name, concern, intensity, result, onRestart, onReview }: { nam
           </ol>
         </ReportSection>
 
-        <ReportSection number="J" title="당신을 살리는 행동 5가지" subtitle="SURVIVAL RULES">
+        <ReportSection number="M" title="당신을 살리는 행동 5가지" subtitle="SURVIVAL RULES">
           <ol className="command-list rescue">
             {[
               "중요한 결정은 메모한 뒤 24시간 후 다시 확인한다.",
@@ -443,7 +567,7 @@ function Result({ name, concern, intensity, result, onRestart, onReview }: { nam
         </ReportSection>
 
         <section className="final-warning reveal">
-          <p>K · FINAL WARNING</p>
+          <p>N · FINAL WARNING</p>
           <blockquote>“{tone(result.finalWarning, intensity)}”</blockquote>
           <span>운명은 확정된 사건이 아니라, 반복되는 선택을 알아차릴 때 달라지는 패턴입니다.</span>
         </section>

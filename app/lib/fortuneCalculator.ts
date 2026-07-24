@@ -2,6 +2,7 @@ import {
   calculateFourPillars,
   lunarToSolar,
   solarToLunar,
+  type BirthInfo,
   type EarthlyBranch,
   type ElementPair,
   type FourPillarsDetail,
@@ -9,6 +10,7 @@ import {
   type YinYangPair,
 } from "manseryeok";
 import type { BirthInput, Element, FortuneCalculator, FortuneChart, Pillar, YinYang } from "../types/fortune";
+import { buildLuckFlow, buildSpiritStars } from "./flowCalculator";
 
 const roles = [
   "가문·초기 환경과 바깥에 보이는 태도",
@@ -115,7 +117,7 @@ export class KoreanManseCalculator implements FortuneCalculator {
   calculate(input: BirthInput): FortuneChart {
     const hour = input.timeUnknown ? 12 : (input.hour ?? 12);
     const longitude = resolveLongitude(input.region);
-    const result = calculateFourPillars({
+    const birthInfo: BirthInfo = {
       year: input.year,
       month: input.month,
       day: input.day,
@@ -128,7 +130,8 @@ export class KoreanManseCalculator implements FortuneCalculator {
       ...(!input.timeUnknown && input.trueSolarTime ? {
         trueSolarTime: { longitude, applyEquationOfTime: true, applyHistoricalDst: true },
       } : {}),
-    });
+    };
+    const result = calculateFourPillars(birthInfo);
     const pillars = buildPillars(result, input.timeUnknown);
     const elements: Element[] = ["목", "화", "토", "금", "수"];
     const elementDistribution = Object.fromEntries(elements.map((element) => [element, 0])) as Record<Element, number>;
@@ -158,6 +161,12 @@ export class KoreanManseCalculator implements FortuneCalculator {
       : solarToLunar(input.year, input.month, input.day);
     const visibleBranches = pillars.filter((pillar) => pillar.branch !== "?").map((pillar) => pillar.branch as EarthlyBranch);
     const signature = pillars.map((pillar) => `${pillar.stem}${pillar.branch}`).join("|");
+    const luckFlow = buildLuckFlow(
+      input,
+      result,
+      (gender) => calculateFourPillars({ ...birthInfo, gender }),
+    );
+    const spiritStars = buildSpiritStars(result, input.timeUnknown);
     return {
       mode: "manse",
       seed: hashChart(signature),
@@ -176,6 +185,8 @@ export class KoreanManseCalculator implements FortuneCalculator {
         : `KASI 기반 절기·간지 계산 · ${input.trueSolarTime ? `${input.region} 경도 진태양시 보정` : "입력 KST 사용"} · 자정 일 경계`,
       solarDate: `${solar.year}-${String(solar.month).padStart(2, "0")}-${String(solar.day).padStart(2, "0")}`,
       lunarDate: `${lunar.year}-${String(lunar.month).padStart(2, "0")}-${String(lunar.day).padStart(2, "0")}${lunar.isLeapMonth ? " 윤달" : ""}`,
+      luckFlow,
+      spiritStars,
     };
   }
 }

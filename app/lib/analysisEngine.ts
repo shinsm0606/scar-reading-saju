@@ -8,6 +8,7 @@ import { moneyWarnings } from "../data/moneyWarnings";
 import { relationshipWarnings } from "../data/relationshipWarnings";
 import { tenGodInterpretations } from "../data/tenGodInterpretations";
 import type { AnalysisResult, ConcernCategory, Element, FortuneChart, Intensity, RiskLevel, WarningRule } from "../types/fortune";
+import { calculateAnnualFlows } from "./flowCalculator";
 
 const weaknessRules = [
   ...elementInterpretations,
@@ -198,6 +199,7 @@ function selectFinalWarning(weaknesses: WarningRule[], seed: number): string {
 export function analyzeChart(
   chart: FortuneChart,
   focus?: { category: ConcernCategory; concern: string },
+  referenceYear = new Date().getFullYear(),
 ): AnalysisResult {
   const ranked = rankMatchingRules(weaknessRules, chart);
   const fallbacks = rankMatchingRules(actionRules, chart);
@@ -216,6 +218,7 @@ export function analyzeChart(
     riskScore,
     weaknesses,
     finalWarning: selectFinalWarning(weaknesses, chart.seed),
+    annualFlows: calculateAnnualFlows(chart, referenceYear),
   };
   if (focus) {
     result.focusAnalysis = buildFocusAnalysis(chart, weaknesses, focus.category, focus.concern);

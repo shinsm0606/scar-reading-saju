@@ -2,8 +2,9 @@ import { getSolarTerm } from "manseryeok";
 import { describe, expect, it } from "vitest";
 import { analyzeChart, calculateRisk, deduplicateWarnings, selectSectionRules, tone } from "../app/lib/analysisEngine";
 import { KoreanManseCalculator } from "../app/lib/fortuneCalculator";
+import { calculateAnnualFlows, detectSpiritStars } from "../app/lib/flowCalculator";
 import { defaultInput, demoProfiles } from "../app/lib/profiles";
-import { decodeSharePayload, encodeSharePayload } from "../app/lib/share";
+import { decodeSharePayload, encodeSharePayload, sanitizeChartForShare } from "../app/lib/share";
 import { deleteBirthInput, loadBirthInput, saveBirthInput } from "../app/lib/storage";
 import { isValidDate, validateBirthInput } from "../app/lib/validation";
 
@@ -43,6 +44,27 @@ describe("KASI 기반 실제 만세력 계산", () => {
     expect(chart.pillars.slice(0, 3).every((pillar) => pillar.stem !== "?")).toBe(true);
     expect(chart.pillars[3].stem).toBe("?");
     expect(chart.confidence).toBeLessThan(90);
+  });
+
+  it("성별이 있으면 실제 대운 방향 하나와 대운수를 반환한다", () => {
+    const chart = new KoreanManseCalculator().calculate({
+      ...defaultInput,
+      gender: "male",
+    });
+    expect(chart.luckFlow?.certainty).toBe("confirmed");
+    expect(chart.luckFlow?.options).toHaveLength(1);
+    expect(chart.luckFlow?.options[0].forward).toBe(true);
+    expect(chart.luckFlow?.options[0].cycles.length).toBeGreaterThanOrEqual(8);
+    expect(chart.luckFlow?.options[0].startAge).toBeGreaterThan(0);
+  });
+
+  it("성별 미선택은 순행과 역행 가능성을 모두 표시한다", () => {
+    const chart = new KoreanManseCalculator().calculate({
+      ...defaultInput,
+      gender: "none",
+    });
+    expect(chart.luckFlow?.certainty).toBe("alternatives");
+    expect(new Set(chart.luckFlow?.options.map(({ forward }) => forward))).toEqual(new Set([true, false]));
   });
 
   it("양력과 대응 음력 입력은 같은 원국을 만든다", () => {
@@ -128,6 +150,21 @@ describe("검증과 해석", () => {
     expect(result.focusAnalysis?.matchedKeywords).toContain("퇴사");
   });
 
+  it("2026년 세운을 병오로 계산하고 7년 흐름을 만든다", () => {
+    const chart = new KoreanManseCalculator().calculate(defaultInput);
+    const flows = calculateAnnualFlows(chart, 2026);
+    expect(flows).toHaveLength(7);
+    expect(flows.find(({ year }) => year === 2026)?.korean).toBe("병오");
+    expect(flows.every(({ action, warning }) => action.length > 0 && warning.length > 0)).toBe(true);
+  });
+
+  it("년지·일지 삼합 기준 도화와 역마를 재현 가능하게 판정한다", () => {
+    const stars = detectSpiritStars("자", "진", "갑", ["자", "진", "유", "인"]);
+    expect(stars.find(({ id }) => id === "peach-blossom")?.present).toBe(true);
+    expect(stars.find(({ id }) => id === "travel-horse")?.present).toBe(true);
+    expect(stars.find(({ id }) => id === "canopy")?.present).toBe(true);
+  });
+
   it("풀이 강도에 따라 표현이 달라진다", () => {
     const text = "중요한 결정을 하지 마십시오";
     expect(tone(text, "mild")).not.toBe(tone(text, "direct"));
@@ -152,12 +189,20 @@ describe("저장과 공유 개인정보", () => {
 
   it("공유 데이터에는 생년월일과 출생시간이 없다", () => {
     const chart = new KoreanManseCalculator().calculate(defaultInput);
-    const encoded = encodeSharePayload({ v: 2, name: "공유자", intensity: "direct", chart });
+    const encoded = encodeSharePayload({
+      v: 2,
+      name: "공유자",
+      intensity: "direct",
+      chart: sanitizeChartForShare(chart),
+    });
     const decoded = decodeSharePayload(encoded);
     expect(decoded?.chart.pillars).toEqual(chart.pillars);
     expect(decoded).not.toHaveProperty("year");
     expect(decoded).not.toHaveProperty("hour");
     expect(decoded).not.toHaveProperty("concern");
     expect(encoded).not.toContain(String(defaultInput.year));
+    expect(decoded?.chart.solarDate).toBe("공유본에서 제외");
+    expect(decoded?.chart.lunarDate).toBe("공유본에서 제외");
+    expect(decoded?.chart.calculationBasis).not.toContain(defaultInput.region);
   });
 });

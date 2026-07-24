@@ -54,6 +54,62 @@ export interface FortuneChart {
   calculationBasis: string;
   solarDate: string;
   lunarDate: string;
+  luckFlow?: LuckFlow;
+  spiritStars?: SpiritStar[];
+}
+
+export interface LuckCycle {
+  startAge: number;
+  endAge: number;
+  stem: string;
+  branch: string;
+  korean: string;
+  element: Element;
+  tenGod: string;
+  branchTenGod: string;
+  interactions: string[];
+}
+
+export interface LuckOption {
+  forward: boolean;
+  label: string;
+  startAge: number;
+  startYears: number;
+  startMonths: number;
+  startDays: number;
+  cycles: LuckCycle[];
+}
+
+export interface LuckFlow {
+  certainty: "confirmed" | "alternatives";
+  options: LuckOption[];
+}
+
+export interface AnnualFlow {
+  year: number;
+  stem: string;
+  branch: string;
+  korean: string;
+  element: Element;
+  tenGod: string;
+  branchTenGod: string;
+  interactions: string[];
+  pressure: "낮음" | "보통" | "높음";
+  theme: string;
+  warning: string;
+  action: string;
+}
+
+export interface SpiritStar {
+  id: "peach-blossom" | "travel-horse" | "canopy" | "noble-helper";
+  name: string;
+  hanja: string;
+  present: boolean;
+  matchedBranches: string[];
+  basis: string;
+  summary: string;
+  warning: string;
+  action: string;
 }
 
 export interface WarningRule {
@@ -82,6 +138,7 @@ export interface AnalysisResult {
     rule: WarningRule;
     linkedWeakness: WarningRule;
   };
+  annualFlows: AnnualFlow[];
 }
 
 export interface SharePayload {
