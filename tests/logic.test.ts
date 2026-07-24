@@ -148,6 +148,17 @@ describe("검증과 해석", () => {
     expect(result.focusAnalysis?.category).toBe("career");
     expect(result.focusAnalysis?.rule.id).toBe("career-recognition-collapse");
     expect(result.focusAnalysis?.matchedKeywords).toContain("퇴사");
+    expect(result.overallAssessment.focusConclusion).toContain("퇴사");
+    expect(result.overallAssessment.firstPriority).toBe(result.focusAnalysis?.rule.actionRules[0]);
+  });
+
+  it("원국과 현재 세운을 합친 최종 종합 판정을 만든다", () => {
+    const chart = new KoreanManseCalculator().calculate(defaultInput);
+    const result = analyzeChart(chart, undefined, 2026);
+    expect(result.overallAssessment.summary).toContain(`${chart.dayMaster} 일간`);
+    expect(result.overallAssessment.currentFlow).toContain("2026년 병오");
+    expect(result.overallAssessment.coreRisk).toContain(result.weaknesses[0].summary);
+    expect(result.overallAssessment.firstPriority).toBe(result.weaknesses[0].actionRules[0]);
   });
 
   it("2026년 세운을 병오로 계산하고 7년 흐름을 만든다", () => {

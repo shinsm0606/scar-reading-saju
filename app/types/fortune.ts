@@ -139,6 +139,16 @@ export interface AnalysisResult {
     linkedWeakness: WarningRule;
   };
   annualFlows: AnnualFlow[];
+  overallAssessment: {
+    verdict: string;
+    headline: string;
+    summary: string;
+    coreRisk: string;
+    protectiveFactor: string;
+    currentFlow: string;
+    firstPriority: string;
+    focusConclusion?: string;
+  };
 }
 
 export interface SharePayload {

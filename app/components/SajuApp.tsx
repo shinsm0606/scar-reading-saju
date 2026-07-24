@@ -362,6 +362,7 @@ function Result({ name, concern, intensity, result, onRestart, onReview }: { nam
     `${name}님의 사주 경고 보고서`,
     `종합 위험 등급: ${result.riskLevel}`,
     ...result.weaknesses.map((rule, i) => `${i + 1}. ${tone(rule.title, intensity)}\n${tone(rule.summary, intensity)}\n행동: ${tone(rule.actionRules[0], intensity)}`),
+    `최종 총평: ${result.overallAssessment.verdict}\n${tone(result.overallAssessment.summary, intensity)}\n가장 먼저 할 일: ${tone(result.overallAssessment.firstPriority, intensity)}`,
     `최종 경고: ${tone(result.finalWarning, intensity)}`,
     "본 결과는 전통 명리학 기반 자기 성찰용 콘텐츠이며 미래 사건을 확정하지 않습니다.",
   ].join("\n\n"), [name, result, intensity]);
@@ -566,8 +567,57 @@ function Result({ name, concern, intensity, result, onRestart, onReview }: { nam
           </ol>
         </ReportSection>
 
+        <ReportSection number="N" title="최종 종합 판정" subtitle="OVERALL ASSESSMENT">
+          <div className="overall-assessment">
+            <header>
+              <div className="overall-grade">
+                <span>FINAL VERDICT</span>
+                <strong>{result.overallAssessment.verdict}</strong>
+                <b>위험 등급 {result.riskLevel} · {result.riskScore}/100</b>
+              </div>
+              <div className="overall-headline">
+                <span>이 사주의 핵심 결론</span>
+                <h3>{tone(result.overallAssessment.headline, intensity)}</h3>
+                <p>{tone(result.overallAssessment.summary, intensity)}</p>
+              </div>
+            </header>
+            <div className="overall-grid">
+              <article>
+                <span>01 · CORE RISK</span>
+                <h4>가장 먼저 무너지는 지점</h4>
+                <p>{tone(result.overallAssessment.coreRisk, intensity)}</p>
+              </article>
+              <article>
+                <span>02 · PROTECTIVE FACTOR</span>
+                <h4>당신에게 이미 있는 보호 장치</h4>
+                <p>{tone(result.overallAssessment.protectiveFactor, intensity)}</p>
+              </article>
+              <article>
+                <span>03 · CURRENT FLOW</span>
+                <h4>현재 흐름에서의 판단</h4>
+                <p>{tone(result.overallAssessment.currentFlow, intensity)}</p>
+              </article>
+              <article className="priority">
+                <span>04 · FIRST PRIORITY</span>
+                <h4>지금 가장 먼저 할 일</h4>
+                <p>{tone(result.overallAssessment.firstPriority, intensity)}</p>
+              </article>
+            </div>
+            {result.overallAssessment.focusConclusion && (
+              <div className="overall-focus">
+                <strong>입력한 고민에 대한 최종 결론</strong>
+                <p>{tone(result.overallAssessment.focusConclusion, intensity)}</p>
+              </div>
+            )}
+            <div className="overall-conclusion">
+              <strong>총평</strong>
+              <p>이 결과는 운이 나쁘다는 판정이 아닙니다. 강점이 과해지는 순간을 방치하면 같은 문제가 반복되므로, 위 행동 수칙을 생활 구조로 고정해야 한다는 경고입니다.</p>
+            </div>
+          </div>
+        </ReportSection>
+
         <section className="final-warning reveal">
-          <p>N · FINAL WARNING</p>
+          <p>O · FINAL WARNING</p>
           <blockquote>“{tone(result.finalWarning, intensity)}”</blockquote>
           <span>운명은 확정된 사건이 아니라, 반복되는 선택을 알아차릴 때 달라지는 패턴입니다.</span>
         </section>

@@ -196,6 +196,51 @@ function selectFinalWarning(weaknesses: WarningRule[], seed: number): string {
   return finals[seed % finals.length];
 }
 
+function buildOverallAssessment(result: Omit<AnalysisResult, "overallAssessment">): AnalysisResult["overallAssessment"] {
+  const { chart, weaknesses, riskLevel, annualFlows, focusAnalysis } = result;
+  const elementEntries = Object.entries(chart.elementDistribution) as [Element, number][];
+  const strongestElement = [...elementEntries].sort((a, b) => b[1] - a[1])[0][0];
+  const weakestElement = [...elementEntries].sort((a, b) => a[1] - b[1])[0][0];
+  const dominantTenGod = Object.entries(chart.tenGodDistribution).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "비견";
+  const currentAnnual = annualFlows[2];
+  const verdicts: Record<RiskLevel, string> = {
+    안정: "균형 유지형",
+    주의: "습관 교정 필요",
+    경계: "반복 패턴 경계",
+    위험: "우선순위 재정비 필요",
+    고위험: "생활 구조 즉시 점검",
+  };
+  const strengths: Record<Element, string> = {
+    목: "방향을 만들고 시작하는 힘",
+    화: "분위기를 움직이고 표현하는 힘",
+    토: "책임을 지고 지속하는 힘",
+    금: "기준을 세우고 정리하는 힘",
+    수: "맥락을 읽고 우회로를 찾는 힘",
+  };
+  const compensations: Record<Element, string> = {
+    목: "작은 첫 행동과 장기 방향",
+    화: "즉시 표현하고 반응을 확인하는 습관",
+    토: "반복 가능한 생활 리듬",
+    금: "거절·정리·중단 기준",
+    수: "정보 확인과 감정의 냉각 시간",
+  };
+  const primary = weaknesses[0];
+  const focusConclusion = focusAnalysis
+    ? `입력한 고민에서는 “${focusAnalysis.rule.title}” 문제가 원국의 핵심 약점과 겹칩니다. ${focusAnalysis.rule.actionRules[0]}`
+    : undefined;
+
+  return {
+    verdict: verdicts[riskLevel],
+    headline: primary.title,
+    summary: `${chart.dayMaster} 일간을 중심으로 ${strongestElement} 기운과 ${dominantTenGod} 성향이 두드러집니다. 힘이 없어서 무너지는 구조가 아니라, 강점이 과속할 때 부족한 ${weakestElement}의 제동 방식이 따라오지 못하는 구조입니다.`,
+    coreRisk: `${primary.summary} ${primary.consequences}`,
+    protectiveFactor: `보호 요인은 ${strongestElement}의 ${strengths[strongestElement]}입니다. 다만 ${weakestElement}의 ${compensations[weakestElement]}을 붙여야 이 힘이 독주가 아닌 성과로 남습니다.`,
+    currentFlow: `${currentAnnual.year}년 ${currentAnnual.korean} 세운은 ${currentAnnual.theme}입니다. 현재 자극도는 ${currentAnnual.pressure}이며, ${currentAnnual.warning}`,
+    firstPriority: focusAnalysis?.rule.actionRules[0] ?? primary.actionRules[0],
+    ...(focusConclusion ? { focusConclusion } : {}),
+  };
+}
+
 export function analyzeChart(
   chart: FortuneChart,
   focus?: { category: ConcernCategory; concern: string },
@@ -212,18 +257,22 @@ export function analyzeChart(
     92,
     Math.max(18, 19 + imbalance * 6.5 + strengthDeviation * 0.45 + signalSeverity * 1.8 + (chart.confidence < 70 ? 3 : 0)),
   );
-  const result: AnalysisResult = {
+  const annualFlows = calculateAnnualFlows(chart, referenceYear);
+  const partialResult: Omit<AnalysisResult, "overallAssessment"> = {
     chart,
     riskLevel: calculateRisk(riskScore),
     riskScore,
     weaknesses,
     finalWarning: selectFinalWarning(weaknesses, chart.seed),
-    annualFlows: calculateAnnualFlows(chart, referenceYear),
+    annualFlows,
   };
   if (focus) {
-    result.focusAnalysis = buildFocusAnalysis(chart, weaknesses, focus.category, focus.concern);
+    partialResult.focusAnalysis = buildFocusAnalysis(chart, weaknesses, focus.category, focus.concern);
   }
-  return result;
+  return {
+    ...partialResult,
+    overallAssessment: buildOverallAssessment(partialResult),
+  };
 }
 
 export function selectSectionRules(chart: FortuneChart) {
