@@ -174,6 +174,65 @@ export interface SharePayload {
   chart: FortuneChart;
 }
 
+export type GroupPurpose = "friends" | "family" | "travel" | "work" | "business";
+export type TravelRange = "nearby" | "daytrip" | "nationwide";
+
+export interface CompatibilityProfile {
+  id: string;
+  name: string;
+  chart: FortuneChart;
+  addedAt: string;
+}
+
+export interface CompatibilityMetric {
+  id: "emotion" | "communication" | "daily" | "decision" | "resilience";
+  label: string;
+  score: number;
+  description: string;
+}
+
+export interface PairCompatibility {
+  memberIds: [string, string];
+  memberNames: [string, string];
+  score: number;
+  grade: string;
+  metrics: CompatibilityMetric[];
+  interactions: string[];
+  synergy: string[];
+  friction: string[];
+  action: string;
+}
+
+export interface GroupCompatibilityReport {
+  memberCount: number;
+  purpose: GroupPurpose;
+  purposeLabel: string;
+  score: number;
+  grade: string;
+  headline: string;
+  summary: string;
+  currentYear: number;
+  currentFlow: string;
+  elementDistribution: Record<Element, number>;
+  supportiveElements: Element[];
+  excessiveElements: Element[];
+  pairReports: PairCompatibility[];
+  strongestPair: PairCompatibility;
+  carefulPair: PairCompatibility;
+  bridgeMember: string;
+  strengths: string[];
+  risks: string[];
+  operatingRules: string[];
+  recommendedPlaces: Array<{
+    name: string;
+    region: string;
+    category: string;
+    reason: string;
+  }>;
+  avoidEnvironment: string;
+  disclaimer: string;
+}
+
 export interface FortuneCalculator {
   calculate(input: BirthInput): FortuneChart;
 }

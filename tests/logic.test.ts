@@ -1,8 +1,16 @@
 import { getSolarTerm } from "manseryeok";
 import { describe, expect, it } from "vitest";
 import { analyzeChart, buildPersonalizedActions, calculateRisk, deduplicateWarnings, tone } from "../app/lib/analysisEngine";
+import { analyzeGroup, analyzePair, createCompatibilityProfile } from "../app/lib/compatibilityEngine";
+import {
+  clearCompatibilityProfiles,
+  loadCompatibilityProfiles,
+  removeCompatibilityProfile,
+  saveCompatibilityProfile,
+} from "../app/lib/compatibilityStorage";
 import { KoreanManseCalculator } from "../app/lib/fortuneCalculator";
 import { calculateAnnualFlows, detectSpiritStars } from "../app/lib/flowCalculator";
+import { recommendPlaces } from "../app/lib/placeRecommendation";
 import { defaultInput, demoProfiles } from "../app/lib/profiles";
 import {
   buildShareUrl,
@@ -289,5 +297,86 @@ describe("저장과 공유 개인정보", () => {
     };
     const legacyUrl = `https://example.com/?report=${encodeSharePayload(payload)}`;
     expect(decodeSharePayloadFromUrl(legacyUrl)?.name).toBe("이전 링크");
+  });
+});
+
+describe("궁합·모임 분석", () => {
+  const calculator = new KoreanManseCalculator();
+  const profiles = demoProfiles.slice(0, 5).map(({ input }, index) => (
+    createCompatibilityProfile(`구성원${index + 1}`, sanitizeChartForShare(calculator.calculate(input)))
+  ));
+
+  it("같은 두 원국은 항상 같은 궁합 결과를 만든다", () => {
+    expect(analyzePair(profiles[0], profiles[1])).toEqual(analyzePair(profiles[0], profiles[1]));
+  });
+
+  it("서로 다른 조합은 세부 지표와 근거가 달라진다", () => {
+    const first = analyzePair(profiles[0], profiles[1]);
+    const second = analyzePair(profiles[0], profiles[2]);
+    expect(first.memberNames).not.toEqual(second.memberNames);
+    expect(first.metrics.map(({ score }) => score)).not.toEqual(second.metrics.map(({ score }) => score));
+    expect(first.synergy.join(" ")).not.toBe(second.synergy.join(" "));
+  });
+
+  it("다섯 명은 모든 열 개의 1:1 조합을 계산한다", () => {
+    const report = analyzeGroup(profiles, "travel", { range: "nationwide", baseRegion: "서울" });
+    expect(report.memberCount).toBe(5);
+    expect(report.pairReports).toHaveLength(10);
+    expect(report.operatingRules).toHaveLength(5);
+    expect(report.recommendedPlaces).toHaveLength(4);
+    expect(new Set(report.recommendedPlaces.map(({ name }) => name)).size).toBe(4);
+    expect(report.currentYear).toBe(new Date().getFullYear());
+    expect(report.currentFlow).toContain(`${new Date().getFullYear()}년`);
+  });
+
+  it("관계 목적에 따라 운영 경고와 수칙이 달라진다", () => {
+    const travel = analyzeGroup(profiles.slice(0, 3), "travel");
+    const work = analyzeGroup(profiles.slice(0, 3), "work");
+    expect(travel.purposeLabel).toBe("여행 모임");
+    expect(work.purposeLabel).toBe("회사·프로젝트 팀");
+    expect(travel.operatingRules).not.toEqual(work.operatingRules);
+    expect(travel.risks[0]).not.toBe(work.risks[0]);
+  });
+
+  it("분석 인원을 2명 이상 8명 이하로 제한한다", () => {
+    expect(() => analyzeGroup(profiles.slice(0, 1), "friends")).toThrow(/2명 이상 8명 이하/);
+    const tooMany = Array.from({ length: 9 }, (_, index) => ({
+      ...profiles[index % profiles.length],
+      id: `extra-${index}`,
+      name: `추가${index}`,
+    }));
+    expect(() => analyzeGroup(tooMany, "friends")).toThrow(/2명 이상 8명 이하/);
+  });
+
+  it("전국 장소 카탈로그에서 시드에 따라 반복되지 않는 후보를 고른다", () => {
+    const first = recommendPlaces({ supportiveElements: ["목"], excessiveElements: ["화"], seed: 1, count: 4 });
+    const second = recommendPlaces({ supportiveElements: ["목"], excessiveElements: ["화"], seed: 9999, count: 4 });
+    expect(first).toHaveLength(4);
+    expect(second).toHaveLength(4);
+    expect(new Set([...first, ...second].map(({ name }) => name)).size).toBeGreaterThan(4);
+    expect([...first, ...second].some(({ region }) => !region.includes("서울"))).toBe(true);
+  });
+
+  it("가까운 곳 범위에서는 근거리 후보만 반환한다", () => {
+    const places = recommendPlaces({ supportiveElements: ["수"], excessiveElements: ["화"], seed: 12, range: "nearby", count: 3 });
+    expect(places.every(({ range }) => range === "nearby")).toBe(true);
+  });
+
+  it("궁합 보관함에는 생년월일 대신 비식별 원국만 저장하고 삭제한다", () => {
+    const storageMemory = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => storageMemory.get(key) ?? null,
+      setItem: (key: string, value: string) => { storageMemory.set(key, value); },
+      removeItem: (key: string) => { storageMemory.delete(key); },
+    } as Storage;
+    saveCompatibilityProfile(storage, profiles[0]);
+    const loaded = loadCompatibilityProfiles(storage);
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].chart.solarDate).toBe("공유본에서 제외");
+    expect(loaded[0].chart.lunarDate).toBe("공유본에서 제외");
+    expect(removeCompatibilityProfile(storage, profiles[0].id)).toHaveLength(0);
+    saveCompatibilityProfile(storage, profiles[1]);
+    clearCompatibilityProfiles(storage);
+    expect(loadCompatibilityProfiles(storage)).toEqual([]);
   });
 });

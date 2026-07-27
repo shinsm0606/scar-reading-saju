@@ -1,58 +1,63 @@
 import type { Element } from "../types/fortune";
 
+export type TravelRange = "nearby" | "daytrip" | "nationwide";
+
+export type PlaceCandidate = {
+  id: string;
+  name: string;
+  region: string;
+  category: string;
+  elements: Element[];
+  range: Exclude<TravelRange, "nearby"> | "nearby";
+  intensity: "낮음" | "보통" | "높음";
+  reason: string;
+};
+
 export type PlaceRule = {
   direction: string;
   environment: string;
-  places: Array<{ name: string; category: string; reason: string }>;
 };
 
 export const placeRules: Record<Element, PlaceRule> = {
-  목: {
-    direction: "동쪽·북동쪽",
-    environment: "나무가 많고 완만하게 걸을 수 있는 산·숲",
-    places: [
-      { name: "수락산", category: "산", reason: "서울 북동권에서 숲과 능선을 따라 걷기 좋은 후보" },
-      { name: "도봉산", category: "산", reason: "도심에서 접근하면서도 수목과 바위길의 전환을 경험하는 후보" },
-      { name: "국립수목원", category: "숲", reason: "속도를 낮추고 일정한 보행 리듬을 만들기 좋은 후보" },
-    ],
-  },
-  화: {
-    direction: "남쪽",
-    environment: "해가 잘 들고 시야가 열린 해안·전망지",
-    places: [
-      { name: "성산일출봉", category: "오름·해안", reason: "일출과 열린 수평선으로 표현과 활동성을 깨우는 후보" },
-      { name: "여수 오동도", category: "섬·해안", reason: "바다와 산책로를 함께 이용하며 정체된 리듬을 바꾸는 후보" },
-      { name: "부산 이기대 해안산책로", category: "해안", reason: "밝은 야외 활동과 긴 보행을 결합하기 좋은 후보" },
-    ],
-  },
-  토: {
-    direction: "중앙·내륙",
-    environment: "흙길과 성곽처럼 경계가 분명하고 속도가 안정적인 곳",
-    places: [
-      { name: "남한산성", category: "산성·걷기", reason: "완만한 성곽길에서 속도와 호흡을 일정하게 만들기 좋은 후보" },
-      { name: "수원화성", category: "성곽·도시", reason: "정해진 동선과 역사 공간을 따라 차분히 걷기 좋은 후보" },
-      { name: "서울 올림픽공원", category: "공원", reason: "무리한 산행 없이 넓은 지면에서 생활 리듬을 회복하는 후보" },
-    ],
-  },
-  금: {
-    direction: "서쪽",
-    environment: "동선이 정돈되고 시야가 트인 서쪽 공원·성곽·계획도시",
-    places: [
-      { name: "강화 마니산", category: "산", reason: "서쪽 방향성과 선명한 등산 동선으로 정리와 결단을 연습하는 후보" },
-      { name: "인천 송도 센트럴파크", category: "도시·공원", reason: "정돈된 도시 환경과 수변 산책을 함께 이용하는 후보" },
-      { name: "서울 월드컵공원", category: "공원", reason: "넓고 구분된 산책 동선에서 생각을 정리하기 좋은 후보" },
-    ],
-  },
-  수: {
-    direction: "북쪽",
-    environment: "물의 흐름이 보이고 소음이 적은 계곡·호수·해변",
-    places: [
-      { name: "포천 백운계곡", category: "계곡", reason: "물소리와 계곡 보행으로 과열된 반응을 식히는 후보" },
-      { name: "가평 용추계곡", category: "계곡", reason: "숲과 물길을 함께 보며 생각의 속도를 낮추는 후보" },
-      { name: "속초 영랑호", category: "호수", reason: "평탄한 수변 동선에서 오래 생각하기보다 걸으며 정리하는 후보" },
-    ],
-  },
+  목: { direction: "동쪽·북동쪽", environment: "나무가 많고 완만하게 걸을 수 있는 산·숲" },
+  화: { direction: "남쪽", environment: "해가 잘 들고 시야가 열린 해안·전망지" },
+  토: { direction: "중앙·내륙", environment: "흙길과 성곽처럼 경계가 분명하고 속도가 안정적인 곳" },
+  금: { direction: "서쪽", environment: "동선이 정돈되고 시야가 트인 공원·성곽·도시" },
+  수: { direction: "북쪽", environment: "물의 흐름이 보이고 소음이 적은 계곡·호수·해변" },
 };
+
+export const placeCatalog: PlaceCandidate[] = [
+  { id: "bukhansan-dulle", name: "북한산 둘레길", region: "서울", category: "산·숲", elements: ["목", "토"], range: "nearby", intensity: "낮음", reason: "수목이 많은 완만한 길에서 대화와 보행 리듬을 함께 유지하기 좋습니다." },
+  { id: "seoul-forest", name: "서울숲", region: "서울", category: "숲·공원", elements: ["목", "금"], range: "nearby", intensity: "낮음", reason: "접근성이 높고 동선이 분명해 짧은 시간에도 속도를 낮추기 좋습니다." },
+  { id: "dobongsan", name: "도봉산 둘레길", region: "서울", category: "산·숲", elements: ["목", "토"], range: "nearby", intensity: "보통", reason: "바위 능선보다 둘레길을 선택하면 수목과 안정적인 보행을 함께 얻을 수 있습니다." },
+  { id: "suraksan", name: "수락산 숲길", region: "서울·경기", category: "산·숲", elements: ["목", "토"], range: "nearby", intensity: "보통", reason: "북동권 숲길에서 정체된 생각을 움직임으로 전환하기 좋은 후보입니다." },
+  { id: "gwangneung", name: "국립수목원", region: "경기 포천", category: "수목원", elements: ["목", "수"], range: "daytrip", intensity: "낮음", reason: "걷는 속도를 낮추고 관찰과 대화를 길게 이어가기 좋은 숲입니다." },
+  { id: "gapyeong-pine", name: "잣향기푸른숲", region: "경기 가평", category: "숲", elements: ["목", "수"], range: "daytrip", intensity: "낮음", reason: "잣나무 숲과 완만한 길이 긴장 완화와 일정한 호흡을 돕습니다." },
+  { id: "odaesan", name: "오대산 선재길", region: "강원 평창", category: "산·계곡", elements: ["목", "수"], range: "nationwide", intensity: "낮음", reason: "깊은 숲과 물길이 함께 있어 과열과 정체를 동시에 낮추기 좋습니다." },
+  { id: "jirisan-dulle", name: "지리산 둘레길", region: "전북·전남·경남", category: "산·숲", elements: ["목", "토"], range: "nationwide", intensity: "보통", reason: "목표 경쟁보다 긴 호흡의 이동과 대화에 적합한 길입니다." },
+  { id: "naejangsan", name: "내장산 숲길", region: "전북 정읍", category: "산·숲", elements: ["목", "화"], range: "nationwide", intensity: "보통", reason: "계절 색감과 수목이 표현력과 관계의 활기를 보완하는 후보입니다." },
+  { id: "suncheon-bay", name: "순천만국가정원", region: "전남 순천", category: "정원·습지", elements: ["목", "수", "금"], range: "nationwide", intensity: "낮음", reason: "정돈된 정원과 열린 습지가 대화와 휴식을 균형 있게 만듭니다." },
+  { id: "seongsan", name: "성산일출봉", region: "제주", category: "오름·해안", elements: ["화", "토"], range: "nationwide", intensity: "보통", reason: "해가 잘 들고 시야가 열려 정체된 분위기를 전환하기 좋습니다." },
+  { id: "yeosu-odongdo", name: "여수 오동도", region: "전남 여수", category: "섬·해안", elements: ["화", "수", "목"], range: "nationwide", intensity: "낮음", reason: "바다와 산책로를 함께 이용해 활동성과 회복을 동시에 확보할 수 있습니다." },
+  { id: "igidae", name: "이기대 해안산책로", region: "부산", category: "해안", elements: ["화", "수"], range: "nationwide", intensity: "보통", reason: "밝은 야외 활동과 긴 수평선이 답답한 관계 리듬을 환기합니다." },
+  { id: "gyeongpo", name: "경포호 산책로", region: "강원 강릉", category: "호수·해안", elements: ["화", "수"], range: "nationwide", intensity: "낮음", reason: "빛과 물이 함께 있는 평탄한 길에서 대화를 끊지 않고 걸을 수 있습니다." },
+  { id: "namhansanseong", name: "남한산성", region: "경기 광주", category: "산성·걷기", elements: ["토", "금"], range: "daytrip", intensity: "보통", reason: "정해진 성곽 동선이 일정과 역할을 차분하게 맞추는 데 유리합니다." },
+  { id: "suwon-hwaseong", name: "수원화성", region: "경기 수원", category: "성곽·도시", elements: ["토", "금"], range: "daytrip", intensity: "낮음", reason: "구간과 목적지가 명확해 즉흥성보다 합의된 속도로 움직이기 좋습니다." },
+  { id: "olympic-park", name: "올림픽공원", region: "서울", category: "공원", elements: ["토", "목"], range: "nearby", intensity: "낮음", reason: "무리한 산행 없이 넓은 지면에서 생활 리듬을 회복하기 좋습니다." },
+  { id: "gyeryongsan", name: "계룡산 동학사길", region: "충남 공주", category: "산·계곡", elements: ["토", "수"], range: "nationwide", intensity: "보통", reason: "분명한 동선과 계곡이 안정감과 감정 환기를 함께 제공합니다." },
+  { id: "manisan", name: "강화 마니산", region: "인천 강화", category: "산", elements: ["금", "토"], range: "daytrip", intensity: "높음", reason: "서쪽의 선명한 등산 동선이 결단과 정리의 기준을 세우는 데 적합합니다." },
+  { id: "songdo", name: "송도 센트럴파크", region: "인천", category: "도시·수변", elements: ["금", "수"], range: "daytrip", intensity: "낮음", reason: "정돈된 도시 환경과 수변 산책을 함께 이용할 수 있습니다." },
+  { id: "worldcup-park", name: "월드컵공원", region: "서울", category: "공원", elements: ["금", "목"], range: "nearby", intensity: "낮음", reason: "구분된 산책 동선과 넓은 시야가 생각과 역할을 정리하게 합니다." },
+  { id: "dadaepo", name: "다대포 해변공원", region: "부산", category: "해안·공원", elements: ["금", "수", "화"], range: "nationwide", intensity: "낮음", reason: "넓고 평탄한 공간에서 각자의 속도를 유지하면서 함께 머물기 좋습니다." },
+  { id: "pocheon-baegun", name: "백운계곡", region: "경기 포천", category: "계곡", elements: ["수", "목"], range: "daytrip", intensity: "낮음", reason: "물소리와 숲길이 과열된 반응을 식히고 대화의 속도를 낮춥니다." },
+  { id: "gapyeong-yongchu", name: "용추계곡", region: "경기 가평", category: "계곡", elements: ["수", "목"], range: "daytrip", intensity: "보통", reason: "숲과 물길을 함께 보며 즉답보다 관찰을 늘리기 좋습니다." },
+  { id: "yeongrangho", name: "영랑호", region: "강원 속초", category: "호수", elements: ["수", "금"], range: "nationwide", intensity: "낮음", reason: "평탄한 수변 동선이 생각을 대화와 움직임으로 전환하게 합니다." },
+  { id: "semiwon", name: "세미원", region: "경기 양평", category: "정원·수변", elements: ["수", "목", "금"], range: "daytrip", intensity: "낮음", reason: "정돈된 수변 정원에서 감정의 속도와 일정의 속도를 함께 낮추기 좋습니다." },
+  { id: "upo", name: "우포늪 생태길", region: "경남 창녕", category: "습지", elements: ["수", "목"], range: "nationwide", intensity: "낮음", reason: "소음이 적은 물길과 평탄한 길이 오래 대화하며 걷는 일정에 적합합니다." },
+  { id: "saryeoni", name: "사려니숲길", region: "제주", category: "숲", elements: ["목", "수"], range: "nationwide", intensity: "낮음", reason: "강한 목표 없이 나란히 걷는 방식으로 관계의 긴장을 낮추기 좋습니다." },
+  { id: "palgongsan", name: "팔공산 둘레길", region: "대구·경북", category: "산·숲", elements: ["목", "토"], range: "nationwide", intensity: "보통", reason: "숲과 완만한 구간을 선택하면 활동성과 안정감을 함께 얻을 수 있습니다." },
+  { id: "taean", name: "태안 해변길", region: "충남 태안", category: "해안", elements: ["수", "금", "화"], range: "nationwide", intensity: "보통", reason: "긴 수평선과 단순한 동선이 복잡한 결정을 잠시 분리하게 합니다." },
+];
 
 export const excessEnvironmentRules: Record<Element, Array<{ environment: string; reason: string }>> = {
   목: [

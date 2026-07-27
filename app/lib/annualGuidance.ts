@@ -1,5 +1,6 @@
 import { excessEnvironmentRules, foodCautions, peopleCautions, placeRules } from "../data/environmentGuidance";
 import type { AnnualFlow, AnnualGuidance, Element, FortuneChart } from "../types/fortune";
+import { recommendPlaces } from "./placeRecommendation";
 import { formatInteractions } from "./sajuLabels";
 
 export function buildAnnualGuidance(chart: FortuneChart, annual: AnnualFlow): AnnualGuidance {
@@ -53,7 +54,16 @@ export function buildAnnualGuidance(chart: FortuneChart, annual: AnnualFlow): An
     direction: placeRule.direction,
     headline: `${annual.year}년에는 ${placeRule.environment}이 균형 회복에 맞습니다`,
     basis: `원국에서 ${supportiveElement}가 ${chart.elementDistribution[supportiveElement]}개로 가장 약합니다. ${annualRelation}`,
-    recommendedPlaces: placeRule.places,
+    recommendedPlaces: recommendPlaces({
+      supportiveElements: [supportiveElement],
+      excessiveElements: [dominantElement],
+      seed: chart.seed + annual.year,
+      count: 3,
+    }).map(({ name, category, region, reason }) => ({
+      name,
+      category: `${category} · ${region}`,
+      reason,
+    })),
     reduceEnvironments: excessEnvironmentRules[dominantElement],
     cautions,
   };

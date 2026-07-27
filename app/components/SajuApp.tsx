@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CompatibilityHub } from "./CompatibilityHub";
 import { analyzeChart, buildPersonalizedActions, tone } from "../lib/analysisEngine";
+import { createCompatibilityProfile } from "../lib/compatibilityEngine";
 import { KoreanManseCalculator } from "../lib/fortuneCalculator";
 import { defaultInput } from "../lib/profiles";
 import { formatBranch, formatInteractions } from "../lib/sajuLabels";
 import { buildShareUrl, decodeSharePayloadFromUrl, sanitizeChartForShare } from "../lib/share";
 import { deleteBirthInput, loadBirthInput, saveBirthInput } from "../lib/storage";
 import { validateBirthInput } from "../lib/validation";
-import type { AnalysisResult, BirthInput, Element, Intensity, SharePayload, WarningRule } from "../types/fortune";
+import type { AnalysisResult, BirthInput, CompatibilityProfile, Element, Intensity, SharePayload, WarningRule } from "../types/fortune";
 
-type Screen = "intro" | "form" | "loading" | "result";
+type Screen = "intro" | "form" | "loading" | "result" | "compatibility" | "compatibility-form";
 const loadingSteps = ["사주 원국 확인 중", "오행 불균형 분석 중", "반복되는 약점 탐색 중", "최종 경고문 작성 중"];
 const elementMeta: Record<Element, { hanja: string; color: string }> = {
   목: { hanja: "木", color: "#678f64" }, 화: { hanja: "火", color: "#d84b35" },
@@ -466,7 +468,7 @@ function SpiritStarReport({ chart, intensity }: { chart: AnalysisResult["chart"]
   );
 }
 
-function Result({ name, intensity, result, onRestart, onReview }: { name: string; intensity: Intensity; result: AnalysisResult; onRestart: () => void; onReview: () => void }) {
+function Result({ name, intensity, result, onRestart, onReview, onCompatibility }: { name: string; intensity: Intensity; result: AnalysisResult; onRestart: () => void; onReview: () => void; onCompatibility: () => void }) {
   const [notice, setNotice] = useState("");
   const { chart } = result;
   const elementEntries = Object.entries(chart.elementDistribution) as [Element, number][];
@@ -535,7 +537,7 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
       <header className="result-nav">
         <div className="mini-brand"><span>傷</span><strong>흉터까지 읽는 사주</strong></div>
         <div className="nav-actions">
-          <button onClick={copyLink}>공유 링크</button><button onClick={onReview}>결과 다시 보기</button><button onClick={onRestart}>처음부터</button>
+          <button onClick={onCompatibility}>궁합·모임</button><button onClick={copyLink}>공유 링크</button><button onClick={onReview}>결과 다시 보기</button><button onClick={onRestart}>처음부터</button>
         </div>
       </header>
 
@@ -674,8 +676,8 @@ function Result({ name, intensity, result, onRestart, onReview }: { name: string
         </section>
 
         <section className="share-panel reveal">
-          <div><span>REPORT ACTIONS</span><h2>보고서를 남기되,<br />개인정보는 남기지 마십시오.</h2><p>공유 이미지와 링크에는 생년월일·출생시간·지역이 포함되지 않습니다.</p></div>
-          <div className="share-actions"><Button onClick={saveImage}>최종 경고문 이미지 저장</Button><Button variant="ghost" onClick={copyText}>결과 텍스트 복사</Button><Button variant="ghost" onClick={copyLink}>공유 링크 복사</Button></div>
+          <div><span>REPORT ACTIONS</span><h2>이 결과를 혼자 보지 말고,<br />관계의 구조까지 확인하십시오.</h2><p>공유 원국을 2~8명까지 모아 1:1 궁합과 모임 전체 패턴을 분석할 수 있습니다. 링크에는 생년월일·출생시간·지역이 포함되지 않습니다.</p></div>
+          <div className="share-actions"><Button onClick={onCompatibility}>이 사람과 궁합·모임 분석</Button><Button variant="ghost" onClick={saveImage}>최종 경고문 이미지 저장</Button><Button variant="ghost" onClick={copyText}>결과 텍스트 복사</Button><Button variant="ghost" onClick={copyLink}>공유 링크 복사</Button></div>
         </section>
       </div>
       <footer><strong>흉터까지 읽는 사주</strong><p>KASI 기반 만세력 원국과 전통 명리학 요소를 활용한 자기 성찰용 콘텐츠입니다. 미래 사건을 확정하지 않습니다.</p></footer>
@@ -699,6 +701,7 @@ export function SajuApp() {
   const [screen, setScreen] = useState<Screen>("intro");
   const [input, setInput] = useState<BirthInput>(defaultInput);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [compatibilityProfiles, setCompatibilityProfiles] = useState<CompatibilityProfile[]>([]);
   const [step, setStep] = useState(0);
   const timer = useRef<number | null>(null);
 
@@ -748,9 +751,32 @@ export function SajuApp() {
     setResult(null); setStep(0); setScreen("intro");
   };
 
+  const openCompatibility = () => {
+    if (!result) return;
+    const currentProfile = createCompatibilityProfile(input.name, sanitizeChartForShare(result.chart));
+    setCompatibilityProfiles((current) => [
+      currentProfile,
+      ...current.filter(({ id }) => id !== currentProfile.id),
+    ]);
+    setScreen("compatibility");
+  };
+
+  const addCompatibilityProfile = (value: BirthInput) => {
+    saveBirthInput(window.localStorage, value);
+    const chart = new KoreanManseCalculator().calculate({ ...value, allowStorage: false });
+    const profile = createCompatibilityProfile(value.name, sanitizeChartForShare(chart));
+    setCompatibilityProfiles((current) => [
+      ...current.filter(({ id }) => id !== profile.id),
+      profile,
+    ]);
+    setScreen("compatibility");
+  };
+
   if (screen === "intro") return <Intro onStart={() => setScreen("form")} />;
   if (screen === "form") return <InputForm initial={input} onSubmit={startAnalysis} onBack={() => setScreen("intro")} />;
+  if (screen === "compatibility-form") return <InputForm initial={{ ...defaultInput, name: "", allowStorage: false }} onSubmit={addCompatibilityProfile} onBack={() => setScreen("compatibility")} />;
+  if (screen === "compatibility") return <CompatibilityHub initialProfiles={compatibilityProfiles} onAddOwn={() => setScreen("compatibility-form")} onBack={() => setScreen("result")} />;
   if (screen === "loading") return <Loading step={step} />;
   if (!result) return null;
-  return <Result name={input.name} intensity={input.intensity} result={result} onRestart={restart} onReview={() => { window.scrollTo({ top: 0, behavior: "smooth" }); }} />;
+  return <Result name={input.name} intensity={input.intensity} result={result} onRestart={restart} onReview={() => { window.scrollTo({ top: 0, behavior: "smooth" }); }} onCompatibility={openCompatibility} />;
 }
